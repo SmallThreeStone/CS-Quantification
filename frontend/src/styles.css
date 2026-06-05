@@ -315,7 +315,7 @@ tbody tr.selected {
 
 .summary {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) repeat(6, minmax(110px, 145px));
+  grid-template-columns: minmax(210px, 1fr) repeat(7, minmax(104px, 138px));
   gap: 12px;
   align-items: center;
 }

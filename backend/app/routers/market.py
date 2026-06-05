@@ -126,7 +126,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         adjusted_buy_score=adjusted_buy_score,
         adjusted_sell_score=adjusted_sell_score,
         quality_penalty=quality_penalty,
-        snapshots=[_snapshot_out(snapshot) for snapshot in reversed(snapshots)],
+        snapshots=[_snapshot_out(snapshot, config) for snapshot in reversed(snapshots)],
         alerts=[_alert_out(alert) for alert in alerts],
         heatmap=_heatmap(list(reversed(snapshots))),
         alert_summary=_alert_summary(alerts),
@@ -404,6 +404,9 @@ def update_strategy(payload: StrategyConfigUpdate, db: Session = Depends(get_db)
     config.min_volume_change_rate = payload.min_volume_change_rate
     config.cooldown_minutes = payload.cooldown_minutes
     config.quality_penalty_max = payload.quality_penalty_max
+    config.sell_fee_rate = payload.sell_fee_rate
+    config.withdraw_fee_rate = payload.withdraw_fee_rate
+    config.fx_rate = payload.fx_rate
     db.commit()
     db.refresh(config)
     return config
@@ -445,7 +448,7 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
         adjusted_buy_score=adjusted_buy_score,
         adjusted_sell_score=adjusted_sell_score,
         quality_penalty=quality_penalty,
-        latest_snapshot=_snapshot_out(latest_snapshot) if latest_snapshot else None,
+        latest_snapshot=_snapshot_out(latest_snapshot, config) if latest_snapshot else None,
         latest_alert=_alert_out(latest_alert) if latest_alert else None,
         source_quality=source_quality,
         decision_signal=decision_signal,
@@ -473,9 +476,13 @@ def _alert_out(alert: Alert) -> AlertOut:
     )
 
 
-def _snapshot_out(snapshot: MarketSnapshot) -> SnapshotOut:
+def _snapshot_out(snapshot: MarketSnapshot, config: StrategyConfig) -> SnapshotOut:
     spread_amount = snapshot.lowest_price - snapshot.highest_buy_price
     spread_rate = spread_amount / snapshot.lowest_price if snapshot.lowest_price else 0
+    fee_rate = min(1, config.sell_fee_rate + config.withdraw_fee_rate)
+    net_sell_price = snapshot.lowest_price * (1 - fee_rate) * config.fx_rate
+    net_spread_amount = net_sell_price - snapshot.highest_buy_price
+    net_spread_rate = net_spread_amount / snapshot.lowest_price if snapshot.lowest_price else 0
     return SnapshotOut(
         id=snapshot.id,
         lowest_price=snapshot.lowest_price,
@@ -486,6 +493,9 @@ def _snapshot_out(snapshot: MarketSnapshot) -> SnapshotOut:
         avg_price_24h=snapshot.avg_price_24h,
         spread_amount=spread_amount,
         spread_rate=spread_rate,
+        net_sell_price=net_sell_price,
+        net_spread_amount=net_spread_amount,
+        net_spread_rate=net_spread_rate,
         captured_at=snapshot.captured_at,
     )
 

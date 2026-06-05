@@ -153,3 +153,6 @@ class StrategyConfig(Base):
     min_volume_change_rate: Mapped[float] = mapped_column(Float, default=0.5)
     cooldown_minutes: Mapped[int] = mapped_column(Integer, default=20)
     quality_penalty_max: Mapped[int] = mapped_column(Integer, default=30)
+    sell_fee_rate: Mapped[float] = mapped_column(Float, default=0.13)
+    withdraw_fee_rate: Mapped[float] = mapped_column(Float, default=0)
+    fx_rate: Mapped[float] = mapped_column(Float, default=1)

@@ -13,6 +13,9 @@ class SnapshotOut(BaseModel):
     avg_price_24h: float
     spread_amount: float
     spread_rate: float
+    net_sell_price: float
+    net_spread_amount: float
+    net_spread_rate: float
     captured_at: datetime
 
 
@@ -141,6 +144,9 @@ class StrategyConfigOut(BaseModel):
     min_volume_change_rate: float
     cooldown_minutes: int
     quality_penalty_max: int
+    sell_fee_rate: float
+    withdraw_fee_rate: float
+    fx_rate: float
 
     model_config = {"from_attributes": True}
 
@@ -154,6 +160,9 @@ class StrategyConfigUpdate(BaseModel):
     min_volume_change_rate: float = Field(ge=0.01, le=10)
     cooldown_minutes: int = Field(ge=0, le=1440)
     quality_penalty_max: int = Field(ge=0, le=100)
+    sell_fee_rate: float = Field(ge=0, le=0.5)
+    withdraw_fee_rate: float = Field(ge=0, le=0.5)
+    fx_rate: float = Field(ge=0.01, le=100)
 
 
 class ItemOut(BaseModel):

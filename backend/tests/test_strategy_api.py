@@ -31,6 +31,9 @@ def test_strategy_can_be_read_and_updated(db_session):
             "min_volume_change_rate": 0.7,
             "cooldown_minutes": 30,
             "quality_penalty_max": 40,
+            "sell_fee_rate": 0.1,
+            "withdraw_fee_rate": 0.02,
+            "fx_rate": 1.1,
         },
     )
 
@@ -42,6 +45,9 @@ def test_strategy_can_be_read_and_updated(db_session):
     assert updated.json()["min_price_volatility_rate"] == 0.09
     assert updated.json()["min_volume_change_rate"] == 0.7
     assert updated.json()["quality_penalty_max"] == 40
+    assert updated.json()["sell_fee_rate"] == 0.1
+    assert updated.json()["withdraw_fee_rate"] == 0.02
+    assert updated.json()["fx_rate"] == 1.1
 
 
 def test_strategy_rejects_invalid_threshold(db_session):
@@ -61,6 +67,9 @@ def test_strategy_rejects_invalid_threshold(db_session):
             "min_volume_change_rate": 0.5,
             "cooldown_minutes": 30,
             "quality_penalty_max": 30,
+            "sell_fee_rate": 0.13,
+            "withdraw_fee_rate": 0,
+            "fx_rate": 1,
         },
     )
 
@@ -104,3 +113,40 @@ def test_strategy_quality_penalty_changes_adjusted_scores(db_session):
     row = response.json()[0]
     assert row["quality_penalty"] == 30
     assert row["adjusted_buy_score"] == max(0, row["buy_score"] - 30)
+
+
+def test_strategy_fee_rates_change_net_spread_metrics(db_session):
+    platform = Platform(code="steam", name="Steam")
+    item = Item(market_hash_name="fee-score", display_name="Fee Score")
+    db_session.add_all(
+        [
+            platform,
+            item,
+            StrategyConfig(name="default", sell_fee_rate=0.1, withdraw_fee_rate=0.02, fx_rate=1.1),
+        ]
+    )
+    db_session.flush()
+    db_session.add(
+        MarketSnapshot(
+            item_id=item.id,
+            platform_id=platform.id,
+            lowest_price=100,
+            sell_count=10,
+            highest_buy_price=80,
+            buy_count=5,
+            volume_24h=3,
+            avg_price_24h=98,
+        )
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/monitor")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    snapshot = response.json()[0]["latest_snapshot"]
+    assert round(snapshot["net_sell_price"], 2) == 96.8
+    assert round(snapshot["net_spread_amount"], 2) == 16.8
+    assert round(snapshot["net_spread_rate"], 4) == 0.168

@@ -17,6 +17,9 @@ def ensure_runtime_columns(engine: Engine) -> None:
         _add_column(engine, "strategy_configs", "quality_penalty_max", "INTEGER DEFAULT 30")
         _add_column(engine, "strategy_configs", "min_volume_change_rate", "FLOAT DEFAULT 0.5")
         _add_column(engine, "strategy_configs", "min_price_volatility_rate", "FLOAT DEFAULT 0.08")
+        _add_column(engine, "strategy_configs", "sell_fee_rate", "FLOAT DEFAULT 0.13")
+        _add_column(engine, "strategy_configs", "withdraw_fee_rate", "FLOAT DEFAULT 0")
+        _add_column(engine, "strategy_configs", "fx_rate", "FLOAT DEFAULT 1")
 
 
 def _add_column(engine: Engine, table: str, column: str, definition: str) -> None:

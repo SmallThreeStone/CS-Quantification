@@ -739,7 +739,7 @@ function MonitorView({
                 <td>{item.latest_snapshot?.buy_count ?? "-"}</td>
                 <td>
                   <strong>{item.latest_snapshot ? formatPercent(item.latest_snapshot.spread_rate) : "-"}</strong>
-                  {item.latest_snapshot && <span>¥{item.latest_snapshot.spread_amount.toFixed(2)}</span>}
+                  {item.latest_snapshot && <span>净 {formatPercent(item.latest_snapshot.net_spread_rate)}</span>}
                 </td>
                 <td>{item.latest_snapshot?.volume_24h ?? "-"}</td>
                 <td>{item.pool_name ?? "未分组"}</td>
@@ -824,6 +824,7 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
         <Metric label="卖出分" value={scoreLabel(detail.adjusted_sell_score, detail.sell_score)} tone="down" />
         <Metric label="最新底价" value={`¥${latest?.lowest_price.toFixed(2) ?? "-"}`} />
         <Metric label="买卖价差" value={latest ? `¥${latest.spread_amount.toFixed(2)} / ${formatPercent(latest.spread_rate)}` : "-"} />
+        <Metric label="净价差" value={latest ? `¥${latest.net_spread_amount.toFixed(2)} / ${formatPercent(latest.net_spread_rate)}` : "-"} />
       </section>
       <section className="panel">
         <h3>价格走势</h3>
@@ -1051,7 +1052,10 @@ function SettingsView({
       min_buy_change_rate: strategy.min_buy_change_rate,
       min_volume_change_rate: strategy.min_volume_change_rate,
       cooldown_minutes: strategy.cooldown_minutes,
-      quality_penalty_max: strategy.quality_penalty_max
+      quality_penalty_max: strategy.quality_penalty_max,
+      sell_fee_rate: strategy.sell_fee_rate,
+      withdraw_fee_rate: strategy.withdraw_fee_rate,
+      fx_rate: strategy.fx_rate
     });
   }, [strategy]);
 
@@ -1139,6 +1143,30 @@ function SettingsView({
           max={100}
           step={1}
           onChange={(value) => setForm({ ...form, quality_penalty_max: value })}
+        />
+        <NumberField
+          label="卖出手续费 %"
+          value={toPercent(form.sell_fee_rate)}
+          min={0}
+          max={50}
+          step={0.1}
+          onChange={(value) => setForm({ ...form, sell_fee_rate: fromPercent(value) })}
+        />
+        <NumberField
+          label="提现费率 %"
+          value={toPercent(form.withdraw_fee_rate)}
+          min={0}
+          max={50}
+          step={0.1}
+          onChange={(value) => setForm({ ...form, withdraw_fee_rate: fromPercent(value) })}
+        />
+        <NumberField
+          label="汇率/折算系数"
+          value={form.fx_rate}
+          min={0.01}
+          max={100}
+          step={0.01}
+          onChange={(value) => setForm({ ...form, fx_rate: value })}
         />
       </div>
       <div className="settings-actions">

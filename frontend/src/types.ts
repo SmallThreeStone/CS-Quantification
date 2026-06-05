@@ -8,6 +8,9 @@ export type Snapshot = {
   avg_price_24h: number;
   spread_amount: number;
   spread_rate: number;
+  net_sell_price: number;
+  net_spread_amount: number;
+  net_spread_rate: number;
   captured_at: string;
 };
 
@@ -127,6 +130,9 @@ export type StrategyConfig = {
   min_volume_change_rate: number;
   cooldown_minutes: number;
   quality_penalty_max: number;
+  sell_fee_rate: number;
+  withdraw_fee_rate: number;
+  fx_rate: number;
 };
 
 export type StrategyConfigUpdate = Omit<StrategyConfig, "id" | "name">;
