@@ -17,6 +17,7 @@ class AlertDetector:
         alerts.extend(self._sell_count_alert(previous, current))
         alerts.extend(self._buy_count_alert(previous, current))
         alerts.extend(self._price_alert(previous, current))
+        alerts.extend(self._price_volatility_alert(previous, current))
         alerts.extend(self._volume_alert(previous, current))
         return alerts
 
@@ -71,6 +72,26 @@ class AlertDetector:
                 "P1" if abs(rate) >= 0.06 else "P2",
                 direction,
                 previous.lowest_price,
+                current.lowest_price,
+                change,
+                rate,
+            )
+        ]
+
+    def _price_volatility_alert(self, previous: MarketSnapshot, current: MarketSnapshot) -> list[Alert]:
+        change = current.lowest_price - current.avg_price_24h
+        rate = change / max(current.avg_price_24h, 1)
+        latest_rate = (current.lowest_price - previous.lowest_price) / max(previous.lowest_price, 1)
+        if abs(rate) < self._min_price_volatility_rate or abs(latest_rate) >= self._min_price_change_rate:
+            return []
+        direction = "偏卖压风险" if change < 0 else "偏扫货拉升"
+        return [
+            self._build_alert(
+                current,
+                "价格波动异常",
+                "P1" if abs(rate) >= 0.12 else "P2",
+                direction,
+                current.avg_price_24h,
                 current.lowest_price,
                 change,
                 rate,
@@ -166,6 +187,10 @@ class AlertDetector:
     @property
     def _min_price_change_rate(self) -> float:
         return self.config.min_price_change_rate or 0.035
+
+    @property
+    def _min_price_volatility_rate(self) -> float:
+        return self.config.min_price_volatility_rate or 0.08
 
     @property
     def _min_volume_change_rate(self) -> float:

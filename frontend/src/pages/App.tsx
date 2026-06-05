@@ -702,6 +702,7 @@ function SettingsView({
       min_absolute_sell_change: strategy.min_absolute_sell_change,
       min_sell_change_rate: strategy.min_sell_change_rate,
       min_price_change_rate: strategy.min_price_change_rate,
+      min_price_volatility_rate: strategy.min_price_volatility_rate,
       min_buy_change_rate: strategy.min_buy_change_rate,
       min_volume_change_rate: strategy.min_volume_change_rate,
       cooldown_minutes: strategy.cooldown_minutes,
@@ -753,6 +754,14 @@ function SettingsView({
           max={100}
           step={0.1}
           onChange={(value) => setForm({ ...form, min_price_change_rate: fromPercent(value) })}
+        />
+        <NumberField
+          label="价格波动率 %"
+          value={toPercent(form.min_price_volatility_rate)}
+          min={0.1}
+          max={100}
+          step={0.1}
+          onChange={(value) => setForm({ ...form, min_price_volatility_rate: fromPercent(value) })}
         />
         <NumberField
           label="求购变化率 %"

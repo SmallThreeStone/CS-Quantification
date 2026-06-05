@@ -26,6 +26,7 @@ def test_strategy_can_be_read_and_updated(db_session):
             "min_absolute_sell_change": 45,
             "min_sell_change_rate": 0.18,
             "min_price_change_rate": 0.04,
+            "min_price_volatility_rate": 0.09,
             "min_buy_change_rate": 0.16,
             "min_volume_change_rate": 0.7,
             "cooldown_minutes": 30,
@@ -38,6 +39,7 @@ def test_strategy_can_be_read_and_updated(db_session):
     assert updated.status_code == 200
     assert updated.json()["min_absolute_sell_change"] == 45
     assert updated.json()["cooldown_minutes"] == 30
+    assert updated.json()["min_price_volatility_rate"] == 0.09
     assert updated.json()["min_volume_change_rate"] == 0.7
     assert updated.json()["quality_penalty_max"] == 40
 
@@ -54,6 +56,7 @@ def test_strategy_rejects_invalid_threshold(db_session):
             "min_absolute_sell_change": 0,
             "min_sell_change_rate": 0.18,
             "min_price_change_rate": 0.04,
+            "min_price_volatility_rate": 0.08,
             "min_buy_change_rate": 0.16,
             "min_volume_change_rate": 0.5,
             "cooldown_minutes": 30,

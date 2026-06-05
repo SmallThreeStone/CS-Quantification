@@ -327,6 +327,7 @@ def update_strategy(payload: StrategyConfigUpdate, db: Session = Depends(get_db)
     config.min_absolute_sell_change = payload.min_absolute_sell_change
     config.min_sell_change_rate = payload.min_sell_change_rate
     config.min_price_change_rate = payload.min_price_change_rate
+    config.min_price_volatility_rate = payload.min_price_volatility_rate
     config.min_buy_change_rate = payload.min_buy_change_rate
     config.min_volume_change_rate = payload.min_volume_change_rate
     config.cooldown_minutes = payload.cooldown_minutes

@@ -148,6 +148,7 @@ class StrategyConfig(Base):
     min_absolute_sell_change: Mapped[int] = mapped_column(Integer, default=30)
     min_sell_change_rate: Mapped[float] = mapped_column(Float, default=0.12)
     min_price_change_rate: Mapped[float] = mapped_column(Float, default=0.035)
+    min_price_volatility_rate: Mapped[float] = mapped_column(Float, default=0.08)
     min_buy_change_rate: Mapped[float] = mapped_column(Float, default=0.12)
     min_volume_change_rate: Mapped[float] = mapped_column(Float, default=0.5)
     cooldown_minutes: Mapped[int] = mapped_column(Integer, default=20)

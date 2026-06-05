@@ -114,6 +114,7 @@ export type StrategyConfig = {
   min_absolute_sell_change: number;
   min_sell_change_rate: number;
   min_price_change_rate: number;
+  min_price_volatility_rate: number;
   min_buy_change_rate: number;
   min_volume_change_rate: number;
   cooldown_minutes: number;

@@ -12,6 +12,7 @@ def snapshot(
     buy_price: float,
     buy: int,
     volume: int = 10,
+    avg_price: float | None = None,
 ) -> MarketSnapshot:
     row = MarketSnapshot(
         item_id=item.id,
@@ -21,7 +22,7 @@ def snapshot(
         highest_buy_price=buy_price,
         buy_count=buy,
         volume_24h=volume,
-        avg_price_24h=price,
+        avg_price_24h=avg_price if avg_price is not None else price,
         captured_at=datetime.utcnow(),
     )
     row.item = item
@@ -68,6 +69,35 @@ def test_volume_jump_creates_liquidity_alert(db_session):
     volume_alert = next(alert for alert in alerts if alert.alert_type == "成交量异常")
     assert volume_alert.direction == "偏流动性异常"
     assert volume_alert.absolute_change == 25
+
+
+def test_price_deviation_from_average_creates_volatility_alert(db_session):
+    item = Item(id=1, market_hash_name="test", display_name="测试饰品")
+    platform = Platform(id=1, code="steam", name="Steam")
+    config = StrategyConfig(name="default", min_price_change_rate=0.035, min_price_volatility_rate=0.08)
+    previous = snapshot(item, platform, 100, 20, 95, 30, avg_price=100)
+    current = snapshot(item, platform, 102, 20, 95, 30, avg_price=112)
+
+    alerts = AlertDetector(db_session, config).detect(previous, current)
+
+    assert any(alert.alert_type == "价格波动异常" for alert in alerts)
+    volatility_alert = next(alert for alert in alerts if alert.alert_type == "价格波动异常")
+    assert volatility_alert.direction == "偏卖压风险"
+    assert volatility_alert.previous_value == 112
+    assert volatility_alert.current_value == 102
+
+
+def test_price_change_alert_suppresses_overlapping_volatility_alert(db_session):
+    item = Item(id=1, market_hash_name="test", display_name="测试饰品")
+    platform = Platform(id=1, code="steam", name="Steam")
+    config = StrategyConfig(name="default", min_price_change_rate=0.035, min_price_volatility_rate=0.08)
+    previous = snapshot(item, platform, 100, 20, 95, 30, avg_price=100)
+    current = snapshot(item, platform, 94, 20, 95, 30, avg_price=105)
+
+    alerts = AlertDetector(db_session, config).detect(previous, current)
+
+    assert any(alert.alert_type == "底价变化" for alert in alerts)
+    assert not any(alert.alert_type == "价格波动异常" for alert in alerts)
 
 
 def test_cooldown_downgrades_duplicate_alert(db_session):

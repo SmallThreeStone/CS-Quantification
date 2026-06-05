@@ -16,6 +16,7 @@ def ensure_runtime_columns(engine: Engine) -> None:
     if "strategy_configs" in inspector.get_table_names():
         _add_column(engine, "strategy_configs", "quality_penalty_max", "INTEGER DEFAULT 30")
         _add_column(engine, "strategy_configs", "min_volume_change_rate", "FLOAT DEFAULT 0.5")
+        _add_column(engine, "strategy_configs", "min_price_volatility_rate", "FLOAT DEFAULT 0.08")
 
 
 def _add_column(engine: Engine, table: str, column: str, definition: str) -> None:
