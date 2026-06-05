@@ -32,3 +32,43 @@ def test_collect_due_pools_collects_again_after_interval(db_session):
     MarketService(db_session).collect_due_pools()
 
     assert len(pool.items[0].snapshots) == 1
+
+
+def test_collect_run_log_records_success(db_session):
+    platform = Platform(code="steam", name="Steam")
+    pool = MonitorPool(name="重点池", interval_minutes=10)
+    db_session.add_all([platform, pool, StrategyConfig(name="default")])
+    db_session.flush()
+    db_session.add(Item(market_hash_name="log-success", display_name="成功", pool_id=pool.id, is_active=True))
+    db_session.commit()
+
+    service = MarketService(db_session)
+    service.collect_due_pools()
+
+    assert service.last_run_log is not None
+    assert service.last_run_log.status == "success"
+    assert service.last_run_log.item_count == 1
+    assert service.last_run_log.snapshot_count == 1
+
+
+def test_collect_run_log_records_failure_without_raising(db_session):
+    platform = Platform(code="steam", name="Steam")
+    pool = MonitorPool(name="重点池", interval_minutes=10)
+    db_session.add_all([platform, pool, StrategyConfig(name="default")])
+    db_session.flush()
+    db_session.add(Item(market_hash_name="log-failure", display_name="失败", pool_id=pool.id, is_active=True))
+    db_session.commit()
+    service = MarketService(db_session)
+    service.provider = FailingProvider()
+
+    alerts = service.collect_due_pools()
+
+    assert alerts == []
+    assert service.last_run_log is not None
+    assert service.last_run_log.status == "failed"
+    assert service.last_run_log.error_count == 1
+
+
+class FailingProvider:
+    def fetch_quote(self, market_hash_name: str):
+        raise RuntimeError(f"provider failed for {market_hash_name}")

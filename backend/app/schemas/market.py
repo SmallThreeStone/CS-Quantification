@@ -73,6 +73,23 @@ class BacktestSummaryOut(BaseModel):
     avg_change_rate: float
 
 
+class CollectRunLogOut(BaseModel):
+    id: int
+    mode: str
+    provider: str
+    status: str
+    item_count: int
+    snapshot_count: int
+    alert_count: int
+    error_count: int
+    duration_ms: int
+    error: str
+    started_at: datetime
+    finished_at: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
 class StrategyConfigOut(BaseModel):
     id: int
     name: str

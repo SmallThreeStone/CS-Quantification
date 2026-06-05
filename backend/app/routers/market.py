@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Alert, BacktestResult, Item, MarketSnapshot, MonitorPool, Platform, PushRecord
+from app.models import Alert, BacktestResult, CollectRunLog, Item, MarketSnapshot, MonitorPool, Platform, PushRecord
 from app.models import StrategyConfig
 from app.schemas.market import (
     AlertOut,
     BacktestResultOut,
     BacktestSummaryOut,
+    CollectRunLogOut,
     HealthOut,
     ItemCreate,
     ItemDetailOut,
@@ -35,7 +36,8 @@ def health() -> HealthOut:
 
 @router.post("/collect", response_model=list[AlertOut])
 def collect(db: Session = Depends(get_db)) -> list[AlertOut]:
-    alerts = MarketService(db).collect_active_items()
+    market_service = MarketService(db)
+    alerts = market_service.collect_active_items()
     PushService(db).dispatch_alerts(alerts)
     BacktestService(db).evaluate_due_alerts()
     return [_alert_out(alert) for alert in alerts]
@@ -148,6 +150,11 @@ def monitor_pools(db: Session = Depends(get_db)) -> list[MonitorPoolOut]:
         )
         for pool in pools
     ]
+
+
+@router.get("/collect-runs", response_model=list[CollectRunLogOut])
+def collect_runs(db: Session = Depends(get_db)) -> list[CollectRunLog]:
+    return db.query(CollectRunLog).order_by(CollectRunLog.started_at.desc()).limit(100).all()
 
 
 @router.get("/alerts", response_model=list[AlertOut])

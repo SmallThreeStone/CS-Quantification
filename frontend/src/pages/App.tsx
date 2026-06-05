@@ -9,6 +9,7 @@ import type {
   Alert,
   BacktestResult,
   BacktestSummary,
+  CollectRun,
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
@@ -30,6 +31,7 @@ export default function App() {
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
+  const [collectRuns, setCollectRuns] = useState<CollectRun[]>([]);
   const [strategy, setStrategy] = useState<StrategyConfig | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<ItemDetail | null>(null);
@@ -47,6 +49,7 @@ export default function App() {
         nextPushRecords,
         nextBacktests,
         nextBacktestSummary,
+        nextCollectRuns,
         nextStrategy
       ] = await Promise.all([
         api.monitor(),
@@ -56,6 +59,7 @@ export default function App() {
         api.pushRecords(),
         api.backtests(),
         api.backtestSummary(),
+        api.collectRuns(),
         api.strategy()
       ]);
       setItems(nextItems);
@@ -65,6 +69,7 @@ export default function App() {
       setPushRecords(nextPushRecords);
       setBacktests(nextBacktests);
       setBacktestSummary(nextBacktestSummary);
+      setCollectRuns(nextCollectRuns);
       setStrategy(nextStrategy);
       if (!selectedId && nextItems[0]) {
         setSelectedId(nextItems[0].id);
@@ -168,7 +173,9 @@ export default function App() {
           <BacktestView summary={backtestSummary} results={backtests} onEvaluate={evaluateBacktests} loading={loading} />
         )}
         {tab === "settings" && <SettingsView strategy={strategy} onSaved={setStrategy} />}
-        {tab === "source" && <SourceView items={items} pools={pools} alerts={alerts} pushRecords={pushRecords} />}
+        {tab === "source" && (
+          <SourceView items={items} pools={pools} alerts={alerts} pushRecords={pushRecords} collectRuns={collectRuns} />
+        )}
       </main>
     </div>
   );
@@ -663,15 +670,18 @@ function SourceView({
   items,
   pools,
   alerts,
-  pushRecords
+  pushRecords,
+  collectRuns
 }: {
   items: MonitorItem[];
   pools: MonitorPool[];
   alerts: Alert[];
   pushRecords: PushRecord[];
+  collectRuns: CollectRun[];
 }) {
   const hasSnapshots = items.some((item) => item.latest_snapshot);
   const latestPush = pushRecords[0];
+  const latestRun = collectRuns[0];
   return (
     <section className="panel settings">
       <h2>数据源状态</h2>
@@ -682,8 +692,27 @@ function SourceView({
         <Metric label="监控池" value={`${pools.length} 个`} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="最近告警" value={`${alerts.length} 条`} />
+        <Metric label="最近采集" value={latestRun ? `${latestRun.status}:${latestRun.snapshot_count}` : "暂无"} />
         <Metric label="最近推送" value={latestPush ? `${latestPush.channel}:${latestPush.status}` : "暂无"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>采集记录</h3>
+        {collectRuns.length ? (
+          collectRuns.slice(0, 8).map((run) => (
+            <div className="collect-row" key={run.id}>
+              <span>{new Date(run.started_at).toLocaleString()}</span>
+              <strong>{run.mode}</strong>
+              <span>{run.status}</span>
+              <span>{run.provider}</span>
+              <span>{run.snapshot_count}/{run.item_count}</span>
+              <span>{run.alert_count} 告警</span>
+              <span>{run.duration_ms}ms</span>
+            </div>
+          ))
+        ) : (
+          <div className="empty">暂无采集记录</div>
+        )}
       </div>
       <div className="push-table">
         <h3>监控池</h3>

@@ -119,6 +119,23 @@ class BacktestResult(Base):
     platform: Mapped[Platform] = relationship()
 
 
+class CollectRunLog(Base):
+    __tablename__ = "collect_run_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mode: Mapped[str] = mapped_column(String(40), index=True)
+    provider: Mapped[str] = mapped_column(String(80), default="")
+    status: Mapped[str] = mapped_column(String(40), default="running", index=True)
+    item_count: Mapped[int] = mapped_column(Integer, default=0)
+    snapshot_count: Mapped[int] = mapped_column(Integer, default=0)
+    alert_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, default=0)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class StrategyConfig(Base):
     __tablename__ = "strategy_configs"
 

@@ -474,6 +474,20 @@ tbody tr.selected {
   color: #9ca8b8;
 }
 
+.collect-row {
+  display: grid;
+  grid-template-columns: 180px 70px 90px 110px 80px 80px 80px;
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid #1d2530;
+  padding: 10px 0;
+  color: #9ca8b8;
+}
+
+.collect-row strong {
+  color: #d7dde7;
+}
+
 .push-row strong {
   color: #d7dde7;
 }
@@ -520,6 +534,10 @@ tbody tr.selected {
   }
 
   .push-row {
+    grid-template-columns: 1fr;
+  }
+
+  .collect-row {
     grid-template-columns: 1fr;
   }
 

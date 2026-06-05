@@ -64,6 +64,21 @@ export type BacktestSummary = {
   avg_change_rate: number;
 };
 
+export type CollectRun = {
+  id: number;
+  mode: string;
+  provider: string;
+  status: string;
+  item_count: number;
+  snapshot_count: number;
+  alert_count: number;
+  error_count: number;
+  duration_ms: number;
+  error: string;
+  started_at: string;
+  finished_at: string | null;
+};
+
 export type StrategyConfig = {
   id: number;
   name: string;
