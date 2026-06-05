@@ -540,7 +540,7 @@ tbody tr.selected {
 
 .collect-row {
   display: grid;
-  grid-template-columns: 180px 70px 90px 110px 80px 80px 80px;
+  grid-template-columns: 180px 70px 80px 110px 80px 64px 64px 70px 80px 80px;
   gap: 10px;
   align-items: center;
   border-bottom: 1px solid #1d2530;
@@ -550,6 +550,12 @@ tbody tr.selected {
 
 .collect-row strong {
   color: #d7dde7;
+}
+
+.collect-error {
+  grid-column: 1 / -1;
+  color: #8491a5;
+  white-space: normal;
 }
 
 .push-row strong {

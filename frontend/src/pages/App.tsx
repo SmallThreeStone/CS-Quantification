@@ -743,6 +743,8 @@ function SourceView({
   const hasSnapshots = items.some((item) => item.latest_snapshot);
   const latestPush = pushRecords[0];
   const latestRun = collectRuns[0];
+  const qualityTotal = latestRun ? latestRun.real_field_count + latestRun.fallback_field_count : 0;
+  const qualityRatio = qualityTotal ? latestRun!.real_field_count / qualityTotal : 0;
   return (
     <section className="panel settings">
       <h2>数据源状态</h2>
@@ -754,6 +756,8 @@ function SourceView({
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="最近告警" value={`${alerts.length} 条`} />
         <Metric label="最近采集" value={latestRun ? `${latestRun.status}:${latestRun.snapshot_count}` : "暂无"} />
+        <Metric label="真实字段占比" value={latestRun ? formatPercent(qualityRatio) : "暂无"} tone={qualityRatio > 0.5 ? "up" : "neutral"} />
+        <Metric label="补位次数" value={latestRun ? `${latestRun.fallback_count} 次` : "暂无"} />
         <Metric label="最近推送" value={latestPush ? `${latestPush.channel}:${latestPush.status}` : "暂无"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
       </div>
@@ -767,8 +771,12 @@ function SourceView({
               <span>{run.status}</span>
               <span>{run.provider}</span>
               <span>{run.snapshot_count}/{run.item_count}</span>
+              <span>真 {run.real_field_count}</span>
+              <span>补 {run.fallback_field_count}</span>
+              <span>回退 {run.fallback_count}</span>
               <span>{run.alert_count} 告警</span>
               <span>{run.duration_ms}ms</span>
+              {run.error ? <span className="collect-error">{run.error}</span> : <span className="collect-error">ok</span>}
             </div>
           ))
         ) : (

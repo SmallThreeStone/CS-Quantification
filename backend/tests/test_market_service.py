@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from app.models import Item, MonitorPool, Platform, StrategyConfig
+from app.services.market_provider import Quote, SteamMarketProvider
 from app.services.market_service import MarketService
 
 
@@ -69,6 +70,63 @@ def test_collect_run_log_records_failure_without_raising(db_session):
     assert service.last_run_log.error_count == 1
 
 
+def test_collect_run_log_records_source_quality(db_session):
+    platform = Platform(code="steam", name="Steam")
+    pool = MonitorPool(name="quality-pool", interval_minutes=10)
+    db_session.add_all([platform, pool, StrategyConfig(name="default")])
+    db_session.flush()
+    db_session.add(Item(market_hash_name="quality", display_name="质量", pool_id=pool.id, is_active=True))
+    db_session.commit()
+    service = MarketService(db_session)
+    service.provider = QualityProvider()
+
+    service.collect_due_pools()
+
+    assert service.last_run_log is not None
+    assert service.last_run_log.real_field_count == 2
+    assert service.last_run_log.fallback_field_count == 4
+    assert service.last_run_log.fallback_count == 0
+
+
+def test_steam_provider_marks_partial_real_fields(monkeypatch):
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"success": True, "lowest_price": "¥100.50", "volume": "12", "median_price": "¥99.00"}
+
+    monkeypatch.setattr("app.services.market_provider.httpx.get", lambda *args, **kwargs: Response())
+
+    quote = SteamMarketProvider().fetch_quote("AK-47 | Test")
+
+    quality = quote.raw_payload["source_quality"]
+    assert quality["is_fallback"] is False
+    assert {"lowest_price", "volume_24h", "avg_price_24h"} <= set(quality["real_fields"])
+    assert {"sell_count", "highest_buy_price", "buy_count"} <= set(quality["fallback_fields"])
+
+
 class FailingProvider:
     def fetch_quote(self, market_hash_name: str):
         raise RuntimeError(f"provider failed for {market_hash_name}")
+
+
+class QualityProvider:
+    def fetch_quote(self, market_hash_name: str):
+        return Quote(
+            market_hash_name=market_hash_name,
+            lowest_price=100,
+            sell_count=10,
+            highest_buy_price=90,
+            buy_count=5,
+            volume_24h=3,
+            avg_price_24h=98,
+            captured_at=datetime.utcnow(),
+            raw_payload={
+                "source_quality": {
+                    "real_fields": ["lowest_price", "volume_24h"],
+                    "fallback_fields": ["sell_count", "highest_buy_price", "buy_count", "avg_price_24h"],
+                    "is_fallback": False,
+                }
+            },
+        )

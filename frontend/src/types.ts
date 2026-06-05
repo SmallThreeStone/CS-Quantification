@@ -90,6 +90,9 @@ export type CollectRun = {
   snapshot_count: number;
   alert_count: number;
   error_count: number;
+  real_field_count: number;
+  fallback_field_count: number;
+  fallback_count: number;
   duration_ms: number;
   error: string;
   started_at: string;

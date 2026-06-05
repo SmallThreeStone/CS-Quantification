@@ -40,6 +40,9 @@ class MarketService:
         config = self.db.query(StrategyConfig).filter_by(name="default").one()
         alerts: list[Alert] = []
         snapshots = 0
+        real_fields = 0
+        fallback_fields = 0
+        fallback_count = 0
         errors: list[str] = []
         seen: set[int] = set()
         for item in items:
@@ -49,6 +52,10 @@ class MarketService:
             try:
                 previous = self._latest_snapshot(item.id, platform.id)
                 quote = self.provider.fetch_quote(item.market_hash_name)
+                quality = quote.raw_payload.get("source_quality", {})
+                real_fields += len(quality.get("real_fields", []))
+                fallback_fields += len(quality.get("fallback_fields", []))
+                fallback_count += 1 if quality.get("is_fallback") else 0
                 snapshot = MarketSnapshot(
                     item_id=item.id,
                     platform_id=platform.id,
@@ -82,6 +89,9 @@ class MarketService:
         log.snapshot_count = snapshots
         log.alert_count = len(alerts)
         log.error_count = len(errors)
+        log.real_field_count = real_fields
+        log.fallback_field_count = fallback_fields
+        log.fallback_count = fallback_count
         log.error = "\n".join(errors[:10])
         log.finished_at = finished
         log.duration_ms = int((finished - started).total_seconds() * 1000)

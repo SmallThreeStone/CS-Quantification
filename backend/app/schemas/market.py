@@ -99,6 +99,9 @@ class CollectRunLogOut(BaseModel):
     snapshot_count: int
     alert_count: int
     error_count: int
+    real_field_count: int
+    fallback_field_count: int
+    fallback_count: int
     duration_ms: int
     error: str
     started_at: datetime

@@ -1,4 +1,5 @@
 import random
+import re
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -59,7 +60,21 @@ class MockMarketProvider:
             volume_24h=max(0, item["volume_24h"] + random.randint(-2, 5)),
             avg_price_24h=round((lowest_price + item["avg_price_24h"]) / 2, 2),
             captured_at=datetime.utcnow(),
-            raw_payload={"provider": "mock"},
+            raw_payload={
+                "provider": "mock",
+                "source_quality": {
+                    "real_fields": [],
+                    "fallback_fields": [
+                        "lowest_price",
+                        "sell_count",
+                        "highest_buy_price",
+                        "buy_count",
+                        "volume_24h",
+                        "avg_price_24h",
+                    ],
+                    "is_fallback": True,
+                },
+            },
         )
 
 
@@ -76,11 +91,30 @@ class SteamMarketProvider:
         response.raise_for_status()
         payload = response.json()
         if not payload.get("success"):
-            return self.fallback.fetch_quote(market_hash_name)
+            quote = self.fallback.fetch_quote(market_hash_name)
+            quote.raw_payload["provider"] = "steam_priceoverview"
+            quote.raw_payload["source_quality"]["is_fallback"] = True
+            quote.raw_payload["fallback_reason"] = "steam response success=false"
+            quote.raw_payload["payload"] = payload
+            return quote
         fallback = self.fallback.fetch_quote(market_hash_name)
         lowest_price = self._money_to_float(payload.get("lowest_price")) or fallback.lowest_price
         volume_text = str(payload.get("volume") or "").replace(",", "")
         volume_24h = int(volume_text) if volume_text.isdigit() else fallback.volume_24h
+        real_fields = []
+        fallback_fields = ["sell_count", "highest_buy_price", "buy_count"]
+        if payload.get("lowest_price"):
+            real_fields.append("lowest_price")
+        else:
+            fallback_fields.append("lowest_price")
+        if payload.get("volume"):
+            real_fields.append("volume_24h")
+        else:
+            fallback_fields.append("volume_24h")
+        if payload.get("median_price"):
+            real_fields.append("avg_price_24h")
+        else:
+            fallback_fields.append("avg_price_24h")
         return Quote(
             market_hash_name=market_hash_name,
             lowest_price=lowest_price,
@@ -90,19 +124,24 @@ class SteamMarketProvider:
             volume_24h=volume_24h,
             avg_price_24h=self._money_to_float(payload.get("median_price")) or fallback.avg_price_24h,
             captured_at=datetime.utcnow(),
-            raw_payload={"provider": "steam_priceoverview", "payload": payload},
+            raw_payload={
+                "provider": "steam_priceoverview",
+                "payload": payload,
+                "source_quality": {
+                    "real_fields": real_fields,
+                    "fallback_fields": fallback_fields,
+                    "is_fallback": False,
+                },
+            },
         )
 
     def _money_to_float(self, value: str | None) -> float | None:
         if not value:
             return None
-        normalized = (
-            value.replace("¥", "")
-            .replace("￥", "")
-            .replace("RMB", "")
-            .replace(",", "")
-            .strip()
-        )
+        match = re.search(r"\d+(?:,\d{3})*(?:\.\d+)?", value)
+        if match is None:
+            return None
+        normalized = match.group(0).replace(",", "")
         try:
             return round(float(normalized), 2)
         except ValueError:
