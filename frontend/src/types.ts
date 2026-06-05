@@ -154,6 +154,9 @@ export type MonitorItem = {
   status: string;
   buy_score: number;
   sell_score: number;
+  adjusted_buy_score: number;
+  adjusted_sell_score: number;
+  quality_penalty: number;
   latest_snapshot: Snapshot | null;
   latest_alert: Alert | null;
   source_quality: SourceQuality | null;

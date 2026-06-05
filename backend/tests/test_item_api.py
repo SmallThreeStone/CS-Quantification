@@ -187,8 +187,67 @@ def test_monitor_and_detail_return_source_quality(db_session):
     app.dependency_overrides.clear()
     assert monitor.status_code == 200
     assert monitor.json()[0]["source_quality"]["level"] == "partial"
+    assert monitor.json()[0]["quality_penalty"] == 15
+    assert monitor.json()[0]["adjusted_buy_score"] < monitor.json()[0]["buy_score"]
     assert detail.status_code == 200
     assert detail.json()["source_quality"]["real_field_count"] == 2
+
+
+def test_opportunities_sort_by_quality_adjusted_score(db_session):
+    platform = Platform(code="steam", name="Steam")
+    trusted = Item(market_hash_name="trusted", display_name="Trusted")
+    fallback = Item(market_hash_name="fallback", display_name="Fallback")
+    db_session.add_all([platform, trusted, fallback])
+    db_session.flush()
+    db_session.add_all(
+        [
+            MarketSnapshot(
+                item_id=trusted.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=90,
+                buy_count=5,
+                volume_24h=1,
+                avg_price_24h=98,
+                raw_payload=json.dumps(
+                    {
+                        "source_quality": {
+                            "real_fields": ["lowest_price", "sell_count", "highest_buy_price", "buy_count"],
+                            "fallback_fields": [],
+                        }
+                    }
+                ),
+            ),
+            MarketSnapshot(
+                item_id=fallback.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=90,
+                buy_count=5,
+                volume_24h=10,
+                avg_price_24h=98,
+                raw_payload=json.dumps(
+                    {
+                        "source_quality": {
+                            "real_fields": [],
+                            "fallback_fields": ["lowest_price", "sell_count", "highest_buy_price", "buy_count"],
+                        }
+                    }
+                ),
+            ),
+        ]
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/opportunities")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()[0]["display_name"] == "Trusted"
 
 
 def test_discover_item_steam_nameid_updates_item(db_session, monkeypatch):

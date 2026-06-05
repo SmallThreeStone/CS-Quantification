@@ -531,8 +531,14 @@ function MonitorView({
                 <td>{item.latest_snapshot?.buy_count ?? "-"}</td>
                 <td>{item.latest_snapshot?.volume_24h ?? "-"}</td>
                 <td>{item.pool_name ?? "未分组"}</td>
-                <td>{item.buy_score}</td>
-                <td>{item.sell_score}</td>
+                <td>
+                  <strong>{item.adjusted_buy_score}</strong>
+                  {item.quality_penalty > 0 && <span>原 {item.buy_score}</span>}
+                </td>
+                <td>
+                  <strong>{item.adjusted_sell_score}</strong>
+                  {item.quality_penalty > 0 && <span>原 {item.sell_score}</span>}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -555,8 +561,8 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
           <p>{detail.market_hash_name}</p>
         </div>
         <Metric label="状态" value={detail.status} />
-        <Metric label="买入分" value={String(detail.buy_score)} tone="up" />
-        <Metric label="卖出分" value={String(detail.sell_score)} tone="down" />
+        <Metric label="买入分" value={scoreLabel(detail.adjusted_buy_score, detail.buy_score)} tone="up" />
+        <Metric label="卖出分" value={scoreLabel(detail.adjusted_sell_score, detail.sell_score)} tone="down" />
         <Metric label="最新底价" value={`¥${latest?.lowest_price.toFixed(2) ?? "-"}`} />
       </section>
       <section className="panel">
@@ -652,7 +658,9 @@ function OpportunityView({
   onSelect: (id: number) => void;
   setTab: (tab: Tab) => void;
 }) {
-  const sorted = [...items].sort((a, b) => Math.max(b.buy_score, b.sell_score) - Math.max(a.buy_score, a.sell_score));
+  const sorted = [...items].sort(
+    (a, b) => Math.max(b.adjusted_buy_score, b.adjusted_sell_score) - Math.max(a.adjusted_buy_score, a.adjusted_sell_score)
+  );
   return (
     <div className="opportunity-grid">
       {sorted.map((item) => (
@@ -667,8 +675,8 @@ function OpportunityView({
           <strong>{item.display_name}</strong>
           <span>{item.status}</span>
           <div>
-            <Metric label="买入" value={String(item.buy_score)} tone="up" />
-            <Metric label="卖出" value={String(item.sell_score)} tone="down" />
+            <Metric label="买入" value={String(item.adjusted_buy_score)} tone="up" />
+            <Metric label="卖出" value={String(item.adjusted_sell_score)} tone="down" />
           </div>
         </button>
       ))}
@@ -981,4 +989,8 @@ function qualityLevelText(level: string) {
     return "部分补位";
   }
   return "补位";
+}
+
+function scoreLabel(adjusted: number, raw: number) {
+  return adjusted === raw ? String(adjusted) : `${adjusted} / 原 ${raw}`;
 }

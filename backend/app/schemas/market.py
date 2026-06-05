@@ -217,6 +217,9 @@ class MonitorItemOut(BaseModel):
     status: str
     buy_score: int
     sell_score: int
+    adjusted_buy_score: int
+    adjusted_sell_score: int
+    quality_penalty: int
     latest_snapshot: SnapshotOut | None
     latest_alert: AlertOut | None
     source_quality: SourceQualityOut | None
@@ -232,6 +235,9 @@ class ItemDetailOut(BaseModel):
     status: str
     buy_score: int
     sell_score: int
+    adjusted_buy_score: int
+    adjusted_sell_score: int
+    quality_penalty: int
     snapshots: list[SnapshotOut]
     alerts: list[AlertOut]
     heatmap: list[HeatmapBucketOut]
