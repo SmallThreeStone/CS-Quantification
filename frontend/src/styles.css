@@ -327,6 +327,32 @@ tbody tr.selected {
   gap: 10px;
 }
 
+.filter-bar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(130px, 1fr)) 120px;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.compact-field {
+  min-height: 64px;
+  padding: 8px;
+}
+
+.ghost-button {
+  height: 48px;
+  border: 1px solid #2a3749;
+  border-radius: 6px;
+  background: #151b25;
+  color: #d7dde7;
+  cursor: pointer;
+}
+
+.ghost-button:hover {
+  border-color: #2a86c9;
+}
+
 .alert-card {
   border: 1px solid #1d2530;
   border-radius: 8px;
@@ -678,6 +704,10 @@ tbody tr.selected {
   }
 
   .settings-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar {
     grid-template-columns: 1fr;
   }
 

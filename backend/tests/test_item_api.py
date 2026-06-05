@@ -152,6 +152,82 @@ def test_item_detail_returns_heatmap_and_alert_summary(db_session):
     assert len(body["alert_summary"][0]["recent_alerts"]) == 2
 
 
+def test_alerts_can_be_filtered(db_session):
+    steam = Platform(code="steam", name="Steam")
+    buff = Platform(code="buff", name="BUFF")
+    target = Item(market_hash_name="target", display_name="目标饰品")
+    other = Item(market_hash_name="other", display_name="其他饰品")
+    db_session.add_all([steam, buff, target, other])
+    db_session.flush()
+    snapshot = MarketSnapshot(
+        item_id=target.id,
+        platform_id=steam.id,
+        lowest_price=100,
+        sell_count=20,
+        highest_buy_price=95,
+        buy_count=10,
+        volume_24h=5,
+        avg_price_24h=98,
+    )
+    other_snapshot = MarketSnapshot(
+        item_id=other.id,
+        platform_id=buff.id,
+        lowest_price=200,
+        sell_count=20,
+        highest_buy_price=190,
+        buy_count=10,
+        volume_24h=5,
+        avg_price_24h=198,
+    )
+    db_session.add_all([snapshot, other_snapshot])
+    db_session.flush()
+    db_session.add_all(
+        [
+            Alert(
+                item_id=target.id,
+                platform_id=steam.id,
+                snapshot_id=snapshot.id,
+                alert_type="在售变化",
+                severity="P1",
+                title="target",
+                detail="target",
+                previous_value=10,
+                current_value=20,
+                absolute_change=10,
+                change_rate=1,
+            ),
+            Alert(
+                item_id=other.id,
+                platform_id=buff.id,
+                snapshot_id=other_snapshot.id,
+                alert_type="成交量异常",
+                severity="P2",
+                title="other",
+                detail="other",
+                previous_value=10,
+                current_value=20,
+                absolute_change=10,
+                change_rate=1,
+            ),
+        ]
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/alerts",
+        params={"item": "目标", "alert_type": "在售变化", "severity": "P1", "platform": "Steam"},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["item_name"] == "目标饰品"
+    assert body[0]["alert_type"] == "在售变化"
+
+
 def test_monitor_and_detail_return_source_quality(db_session):
     item = Item(market_hash_name="quality-item", display_name="Quality Item")
     platform = Platform(code="steam", name="Steam")

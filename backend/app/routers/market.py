@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -289,8 +289,23 @@ def collect_runs(db: Session = Depends(get_db)) -> list[CollectRunLog]:
 
 
 @router.get("/alerts", response_model=list[AlertOut])
-def alerts(db: Session = Depends(get_db)) -> list[AlertOut]:
-    rows = db.query(Alert).order_by(Alert.created_at.desc()).limit(100).all()
+def alerts(
+    item: str = Query(default=""),
+    alert_type: str = Query(default=""),
+    severity: str = Query(default=""),
+    platform: str = Query(default=""),
+    db: Session = Depends(get_db),
+) -> list[AlertOut]:
+    query = db.query(Alert).join(Item, Alert.item_id == Item.id).join(Platform, Alert.platform_id == Platform.id)
+    if item:
+        query = query.filter(Item.display_name.contains(item))
+    if alert_type:
+        query = query.filter(Alert.alert_type == alert_type)
+    if severity:
+        query = query.filter(Alert.severity == severity)
+    if platform:
+        query = query.filter(Platform.name.contains(platform))
+    rows = query.order_by(Alert.created_at.desc()).limit(100).all()
     return [_alert_out(alert) for alert in rows]
 
 

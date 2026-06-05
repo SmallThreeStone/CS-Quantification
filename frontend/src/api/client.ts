@@ -31,6 +31,13 @@ type SteamNameIdBatchResult = {
   }>;
 };
 
+export type AlertFilters = {
+  item?: string;
+  alert_type?: string;
+  severity?: string;
+  platform?: string;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
@@ -44,7 +51,7 @@ export const api = {
   collect: () => request<Alert[]>("/api/collect", { method: "POST" }),
   collectRuns: () => request<CollectRun[]>("/api/collect-runs"),
   monitor: () => request<MonitorItem[]>("/api/monitor"),
-  alerts: () => request<Alert[]>("/api/alerts"),
+  alerts: (filters: AlertFilters = {}) => request<Alert[]>(queryPath("/api/alerts", filters)),
   backtests: () => request<BacktestResult[]>("/api/backtests"),
   backtestSummary: () => request<BacktestSummary[]>("/api/backtests/summary"),
   evaluateBacktests: () => request<BacktestResult[]>("/api/backtests/evaluate", { method: "POST" }),
@@ -94,3 +101,14 @@ export const api = {
   opportunities: () => request<MonitorItem[]>("/api/opportunities"),
   item: (id: number) => request<ItemDetail>(`/api/items/${id}`)
 };
+
+function queryPath(path: string, params: Record<string, string | undefined>) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      search.set(key, value);
+    }
+  });
+  const suffix = search.toString();
+  return suffix ? `${path}?${suffix}` : path;
+}

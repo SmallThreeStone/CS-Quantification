@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { api } from "../api/client";
+import type { AlertFilters } from "../api/client";
 import { AlertList } from "../components/AlertList";
 import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
@@ -29,6 +30,7 @@ export default function App() {
   const [managedItems, setManagedItems] = useState<ManagedItem[]>([]);
   const [pools, setPools] = useState<MonitorPool[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alertFilters, setAlertFilters] = useState<AlertFilters>({});
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
@@ -56,7 +58,7 @@ export default function App() {
         api.monitor(),
         api.items(),
         api.monitorPools(),
-        api.alerts(),
+        api.alerts(alertFilters),
         api.pushRecords(),
         api.backtests(),
         api.backtestSummary(),
@@ -102,7 +104,7 @@ export default function App() {
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [alertFilters]);
 
   useEffect(() => {
     if (!selected?.id) {
@@ -167,7 +169,14 @@ export default function App() {
 
         {tab === "monitor" && <MonitorView items={items} selectedId={selected?.id} onSelect={setSelectedId} />}
         {tab === "detail" && <DetailView detail={detail} />}
-        {tab === "alerts" && <AlertList alerts={alerts} />}
+        {tab === "alerts" && (
+          <AlertCenter
+            alerts={alerts}
+            filters={alertFilters}
+            onFiltersChange={setAlertFilters}
+            managedItems={managedItems}
+          />
+        )}
         {tab === "opportunities" && <OpportunityView items={items} onSelect={setSelectedId} setTab={setTab} />}
         {tab === "items" && <ItemManager items={managedItems} pools={pools} onChanged={refresh} />}
         {tab === "backtests" && (
@@ -263,6 +272,84 @@ function BacktestView({
         {!results.length && <div className="empty">暂无回测结果</div>}
       </section>
     </div>
+  );
+}
+
+function AlertCenter({
+  alerts,
+  filters,
+  onFiltersChange,
+  managedItems
+}: {
+  alerts: Alert[];
+  filters: AlertFilters;
+  onFiltersChange: (filters: AlertFilters) => void;
+  managedItems: ManagedItem[];
+}) {
+  const itemOptions = useMemo(
+    () => Array.from(new Set(managedItems.map((item) => item.display_name))).filter(Boolean).sort(),
+    [managedItems]
+  );
+  const alertTypes = ["在售变化", "求购变化", "底价变化", "价格波动异常", "成交量异常"];
+  const severities = ["P1", "P2", "P3"];
+  const platforms = Array.from(new Set(alerts.map((alert) => alert.platform_name))).filter(Boolean).sort();
+
+  function update(key: keyof AlertFilters, value: string) {
+    onFiltersChange({ ...filters, [key]: value || undefined });
+  }
+
+  return (
+    <section className="panel">
+      <div className="filter-bar">
+        <label className="field compact-field">
+          <span>饰品</span>
+          <input
+            list="alert-item-options"
+            value={filters.item ?? ""}
+            onChange={(event) => update("item", event.target.value)}
+            placeholder="全部"
+          />
+          <datalist id="alert-item-options">
+            {itemOptions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+        </label>
+        <SelectFilter label="类型" value={filters.alert_type ?? ""} options={alertTypes} onChange={(value) => update("alert_type", value)} />
+        <SelectFilter label="严重度" value={filters.severity ?? ""} options={severities} onChange={(value) => update("severity", value)} />
+        <SelectFilter label="平台" value={filters.platform ?? ""} options={platforms} onChange={(value) => update("platform", value)} />
+        <button className="ghost-button" onClick={() => onFiltersChange({})}>
+          清空筛选
+        </button>
+      </div>
+      <AlertList alerts={alerts} />
+    </section>
+  );
+}
+
+function SelectFilter({
+  label,
+  value,
+  options,
+  onChange
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="field compact-field">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">全部</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
