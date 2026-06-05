@@ -51,7 +51,7 @@ class MarketService:
             seen.add(item.id)
             try:
                 previous = self._latest_snapshot(item.id, platform.id)
-                quote = self.provider.fetch_quote(item.market_hash_name)
+                quote = self.provider.fetch_quote(item.market_hash_name, item.steam_item_nameid)
                 quality = quote.raw_payload.get("source_quality", {})
                 real_fields += len(quality.get("real_fields", []))
                 fallback_fields += len(quality.get("fallback_fields", []))

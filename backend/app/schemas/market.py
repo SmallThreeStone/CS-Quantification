@@ -136,6 +136,7 @@ class ItemOut(BaseModel):
     display_name: str
     exterior: str
     category: str
+    steam_item_nameid: str
     is_active: bool
     pool_id: int | None
     pool_name: str | None = None
@@ -148,6 +149,7 @@ class ItemCreate(BaseModel):
     display_name: str = Field(min_length=1, max_length=160)
     exterior: str = Field(default="", max_length=80)
     category: str = Field(default="", max_length=80)
+    steam_item_nameid: str = Field(default="", max_length=80)
     is_active: bool = True
     pool_id: int | None = None
 
@@ -157,6 +159,7 @@ class ItemUpdate(BaseModel):
     display_name: str = Field(min_length=1, max_length=160)
     exterior: str = Field(default="", max_length=80)
     category: str = Field(default="", max_length=80)
+    steam_item_nameid: str = Field(default="", max_length=80)
     is_active: bool = True
     pool_id: int | None = None
 
@@ -176,6 +179,7 @@ class MonitorItemOut(BaseModel):
     market_hash_name: str
     exterior: str
     category: str
+    steam_item_nameid: str
     pool_name: str | None
     status: str
     buy_score: int
@@ -190,6 +194,7 @@ class ItemDetailOut(BaseModel):
     market_hash_name: str
     exterior: str
     category: str
+    steam_item_nameid: str
     status: str
     buy_score: int
     sell_score: int

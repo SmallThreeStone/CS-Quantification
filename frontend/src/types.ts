@@ -117,6 +117,7 @@ export type ManagedItem = {
   display_name: string;
   exterior: string;
   category: string;
+  steam_item_nameid: string;
   is_active: boolean;
   pool_id: number | null;
   pool_name: string | null;
@@ -139,6 +140,7 @@ export type MonitorItem = {
   market_hash_name: string;
   exterior: string;
   category: string;
+  steam_item_nameid: string;
   pool_name: string | null;
   status: string;
   buy_score: number;

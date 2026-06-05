@@ -43,7 +43,7 @@ class MockMarketProvider:
             },
         }
 
-    def fetch_quote(self, market_hash_name: str) -> Quote:
+    def fetch_quote(self, market_hash_name: str, steam_item_nameid: str = "") -> Quote:
         seed = sum(ord(char) for char in market_hash_name) + datetime.utcnow().minute
         random.seed(seed)
         item = self.base.get(market_hash_name, next(iter(self.base.values())))
@@ -84,7 +84,7 @@ class SteamMarketProvider:
         self.fallback = MockMarketProvider()
         self.item_nameids = self._load_item_nameids()
 
-    def fetch_quote(self, market_hash_name: str) -> Quote:
+    def fetch_quote(self, market_hash_name: str, steam_item_nameid: str = "") -> Quote:
         payload = self._priceoverview(market_hash_name)
         if not payload.get("success"):
             quote = self.fallback.fetch_quote(market_hash_name)
@@ -104,7 +104,7 @@ class SteamMarketProvider:
         orderbook_error = ""
         if settings.steam_orderbook_enabled:
             try:
-                orderbook_payload = self._orderbook(market_hash_name)
+                orderbook_payload = self._orderbook(market_hash_name, steam_item_nameid)
                 orderbook = self._parse_orderbook(orderbook_payload)
             except Exception as exc:
                 orderbook_error = str(exc)
@@ -156,8 +156,8 @@ class SteamMarketProvider:
         response.raise_for_status()
         return response.json()
 
-    def _orderbook(self, market_hash_name: str) -> dict:
-        item_nameid = self.item_nameids.get(market_hash_name)
+    def _orderbook(self, market_hash_name: str, steam_item_nameid: str = "") -> dict:
+        item_nameid = steam_item_nameid or self.item_nameids.get(market_hash_name)
         if not item_nameid:
             raise ValueError("missing steam item_nameid mapping")
         response = httpx.get(

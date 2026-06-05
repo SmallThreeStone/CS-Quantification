@@ -6,6 +6,7 @@ def ensure_runtime_columns(engine: Engine) -> None:
     inspector = inspect(engine)
     if "items" in inspector.get_table_names():
         _add_column(engine, "items", "pool_id", "INTEGER")
+        _add_column(engine, "items", "steam_item_nameid", "VARCHAR(80) DEFAULT ''")
     if "monitor_pools" in inspector.get_table_names():
         _add_column(engine, "monitor_pools", "last_collected_at", "TIMESTAMP")
     if "collect_run_logs" in inspector.get_table_names():

@@ -30,6 +30,7 @@ def seed_defaults(db: Session) -> None:
                     display_name=display_name,
                     exterior=exterior,
                     category=category,
+                    steam_item_nameid="",
                     is_active=True,
                     pool_id=default_pool.id,
                 )

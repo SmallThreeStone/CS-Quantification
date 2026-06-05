@@ -458,9 +458,13 @@ tbody tr.selected {
 
 .item-form {
   display: grid;
-  grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(140px, 1fr)) 130px 140px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   align-items: end;
+}
+
+.item-form .wide-field {
+  grid-column: span 2;
 }
 
 .check-field {

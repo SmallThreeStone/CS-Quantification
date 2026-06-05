@@ -22,6 +22,7 @@ class Item(Base):
     display_name: Mapped[str] = mapped_column(String(160))
     exterior: Mapped[str] = mapped_column(String(80), default="")
     category: Mapped[str] = mapped_column(String(80), default="")
+    steam_item_nameid: Mapped[str] = mapped_column(String(80), default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     pool_id: Mapped[int | None] = mapped_column(ForeignKey("monitor_pools.id"), nullable=True, index=True)
 

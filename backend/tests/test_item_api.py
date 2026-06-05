@@ -21,6 +21,7 @@ def test_item_can_be_created_and_deactivated(db_session):
             "display_name": "AK-47 | 翡翠细条纹",
             "exterior": "崭新出厂",
             "category": "rifle",
+            "steam_item_nameid": "12345",
             "is_active": True,
             "pool_id": pool.id,
         },
@@ -31,6 +32,7 @@ def test_item_can_be_created_and_deactivated(db_session):
     app.dependency_overrides.clear()
     assert created.status_code == 200
     assert created.json()["pool_name"] == "重点池"
+    assert created.json()["steam_item_nameid"] == "12345"
     assert inactive.status_code == 200
     assert inactive.json()["is_active"] is False
     assert all(row["id"] != created.json()["id"] for row in monitor.json())

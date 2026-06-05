@@ -112,7 +112,7 @@ def test_steam_provider_uses_orderbook_when_item_nameid_is_configured(monkeypatc
     previous_enabled = settings.steam_orderbook_enabled
     previous_mapping = settings.steam_orderbook_item_nameids
     settings.steam_orderbook_enabled = True
-    settings.steam_orderbook_item_nameids = '{"AK-47 | Test": "12345"}'
+    settings.steam_orderbook_item_nameids = "{}"
 
     class Response:
         def __init__(self, payload):
@@ -136,7 +136,7 @@ def test_steam_provider_uses_orderbook_when_item_nameid_is_configured(monkeypatc
 
     monkeypatch.setattr("app.services.market_provider.httpx.get", fake_get)
     try:
-        quote = SteamMarketProvider().fetch_quote("AK-47 | Test")
+        quote = SteamMarketProvider().fetch_quote("AK-47 | Test", "12345")
     finally:
         settings.steam_orderbook_enabled = previous_enabled
         settings.steam_orderbook_item_nameids = previous_mapping
@@ -176,12 +176,12 @@ def test_steam_provider_records_orderbook_fallback_reason(monkeypatch):
 
 
 class FailingProvider:
-    def fetch_quote(self, market_hash_name: str):
+    def fetch_quote(self, market_hash_name: str, steam_item_nameid: str = ""):
         raise RuntimeError(f"provider failed for {market_hash_name}")
 
 
 class QualityProvider:
-    def fetch_quote(self, market_hash_name: str):
+    def fetch_quote(self, market_hash_name: str, steam_item_nameid: str = ""):
         return Quote(
             market_hash_name=market_hash_name,
             lowest_price=100,

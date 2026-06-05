@@ -22,8 +22,11 @@ def test_alembic_upgrade_creates_core_tables(tmp_path):
         command.upgrade(config, "head")
 
         engine = create_engine(settings.database_url)
-        tables = set(inspect(engine).get_table_names())
+        inspector = inspect(engine)
+        tables = set(inspector.get_table_names())
+        item_columns = {row["name"] for row in inspector.get_columns("items")}
         assert {"items", "market_snapshots", "alerts", "strategy_configs", "alembic_version"} <= tables
+        assert "steam_item_nameid" in item_columns
     finally:
         settings.database_url = previous_url
 

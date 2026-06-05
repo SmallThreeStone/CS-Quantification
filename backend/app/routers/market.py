@@ -68,6 +68,7 @@ def create_item(payload: ItemCreate, db: Session = Depends(get_db)) -> ItemOut:
         display_name=payload.display_name,
         exterior=payload.exterior,
         category=payload.category,
+        steam_item_nameid=payload.steam_item_nameid,
         is_active=payload.is_active,
         pool_id=payload.pool_id,
     )
@@ -99,6 +100,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         market_hash_name=item.market_hash_name,
         exterior=item.exterior,
         category=item.category,
+        steam_item_nameid=item.steam_item_nameid,
         status=status_from_alert(latest_alert),
         buy_score=buy_score,
         sell_score=sell_score,
@@ -122,6 +124,7 @@ def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)
     item.display_name = payload.display_name
     item.exterior = payload.exterior
     item.category = payload.category
+    item.steam_item_nameid = payload.steam_item_nameid
     item.is_active = payload.is_active
     item.pool_id = payload.pool_id
     db.commit()
@@ -228,6 +231,7 @@ def _monitor_item(db: Session, item: Item) -> MonitorItemOut:
         market_hash_name=item.market_hash_name,
         exterior=item.exterior,
         category=item.category,
+        steam_item_nameid=item.steam_item_nameid,
         pool_name=item.pool.name if item.pool else None,
         status=status_from_alert(latest_alert),
         buy_score=buy_score,
@@ -265,6 +269,7 @@ def _item_out(item: Item) -> ItemOut:
         display_name=item.display_name,
         exterior=item.exterior,
         category=item.category,
+        steam_item_nameid=item.steam_item_nameid,
         is_active=item.is_active,
         pool_id=item.pool_id,
         pool_name=item.pool.name if item.pool else None,

@@ -271,6 +271,7 @@ const emptyItem: ManagedItemInput = {
   display_name: "",
   exterior: "",
   category: "",
+  steam_item_nameid: "",
   is_active: true,
   pool_id: null
 };
@@ -295,6 +296,7 @@ function ItemManager({
       display_name: item.display_name,
       exterior: item.exterior,
       category: item.category,
+      steam_item_nameid: item.steam_item_nameid,
       is_active: item.is_active,
       pool_id: item.pool_id
     });
@@ -344,6 +346,13 @@ function ItemManager({
           <input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
         </label>
         <label className="field">
+          <span>Steam NameID</span>
+          <input
+            value={form.steam_item_nameid}
+            onChange={(event) => setForm({ ...form, steam_item_nameid: event.target.value })}
+          />
+        </label>
+        <label className="field">
           <span>监控池</span>
           <select
             value={form.pool_id ?? ""}
@@ -377,6 +386,7 @@ function ItemManager({
               <th>饰品</th>
               <th>品质</th>
               <th>分类</th>
+              <th>NameID</th>
               <th>监控池</th>
               <th>状态</th>
               <th>操作</th>
@@ -391,6 +401,7 @@ function ItemManager({
                 </td>
                 <td>{item.exterior || "-"}</td>
                 <td>{item.category || "-"}</td>
+                <td>{item.steam_item_nameid || "-"}</td>
                 <td>{item.pool_name || "未分组"}</td>
                 <td><span className="tag">{item.is_active ? "监控中" : "已停用"}</span></td>
                 <td>
