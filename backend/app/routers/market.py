@@ -3,7 +3,17 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Alert, Item, MarketSnapshot, Platform, PushRecord
-from app.schemas.market import AlertOut, HealthOut, ItemDetailOut, MonitorItemOut, PushRecordOut, SnapshotOut
+from app.models import StrategyConfig
+from app.schemas.market import (
+    AlertOut,
+    HealthOut,
+    ItemDetailOut,
+    MonitorItemOut,
+    PushRecordOut,
+    SnapshotOut,
+    StrategyConfigOut,
+    StrategyConfigUpdate,
+)
 from app.services.market_service import MarketService
 from app.services.push_service import PushService
 from app.services.score_service import score_from_snapshot, status_from_alert
@@ -70,6 +80,24 @@ def push_records(db: Session = Depends(get_db)) -> list[PushRecordOut]:
     return db.query(PushRecord).order_by(PushRecord.created_at.desc()).limit(100).all()
 
 
+@router.get("/strategy", response_model=StrategyConfigOut)
+def strategy(db: Session = Depends(get_db)) -> StrategyConfig:
+    return _default_strategy(db)
+
+
+@router.put("/strategy", response_model=StrategyConfigOut)
+def update_strategy(payload: StrategyConfigUpdate, db: Session = Depends(get_db)) -> StrategyConfig:
+    config = _default_strategy(db)
+    config.min_absolute_sell_change = payload.min_absolute_sell_change
+    config.min_sell_change_rate = payload.min_sell_change_rate
+    config.min_price_change_rate = payload.min_price_change_rate
+    config.min_buy_change_rate = payload.min_buy_change_rate
+    config.cooldown_minutes = payload.cooldown_minutes
+    db.commit()
+    db.refresh(config)
+    return config
+
+
 @router.get("/opportunities", response_model=list[MonitorItemOut])
 def opportunities(db: Session = Depends(get_db)) -> list[MonitorItemOut]:
     items = [_monitor_item(db, item) for item in db.query(Item).filter_by(is_active=True).all()]
@@ -118,3 +146,13 @@ def _alert_out(alert: Alert) -> AlertOut:
         item_name=alert.item.display_name,
         platform_name=platform.name,
     )
+
+
+def _default_strategy(db: Session) -> StrategyConfig:
+    config = db.query(StrategyConfig).filter_by(name="default").first()
+    if config is None:
+        config = StrategyConfig(name="default")
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    return config

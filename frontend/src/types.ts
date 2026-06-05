@@ -38,6 +38,18 @@ export type PushRecord = {
   sent_at: string | null;
 };
 
+export type StrategyConfig = {
+  id: number;
+  name: string;
+  min_absolute_sell_change: number;
+  min_sell_change_rate: number;
+  min_price_change_rate: number;
+  min_buy_change_rate: number;
+  cooldown_minutes: number;
+};
+
+export type StrategyConfigUpdate = Omit<StrategyConfig, "id" | "name">;
+
 export type MonitorItem = {
   id: number;
   display_name: string;

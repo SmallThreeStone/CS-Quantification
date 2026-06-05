@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SnapshotOut(BaseModel):
@@ -45,6 +45,26 @@ class PushRecordOut(BaseModel):
     sent_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class StrategyConfigOut(BaseModel):
+    id: int
+    name: str
+    min_absolute_sell_change: int
+    min_sell_change_rate: float
+    min_price_change_rate: float
+    min_buy_change_rate: float
+    cooldown_minutes: int
+
+    model_config = {"from_attributes": True}
+
+
+class StrategyConfigUpdate(BaseModel):
+    min_absolute_sell_change: int = Field(ge=1, le=10000)
+    min_sell_change_rate: float = Field(ge=0.01, le=5)
+    min_price_change_rate: float = Field(ge=0.001, le=1)
+    min_buy_change_rate: float = Field(ge=0.01, le=5)
+    cooldown_minutes: int = Field(ge=0, le=1440)
 
 
 class MonitorItemOut(BaseModel):

@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.2 — 微信 / QQ 推送适配与推送记录
+V0.1.3 — 策略配置 API 与前端可编辑阈值
 
 ## 功能范围
 
@@ -14,6 +14,7 @@ V0.1.2 — 微信 / QQ 推送适配与推送记录
 - 异动告警：在售变化、求购变化、底价变化
 - 推送记录：支持微信 / QQ Webhook 适配，未配置时记录 skipped
 - 机会榜：按买入分和卖出分排序
+- 策略配置：在售变化、求购变化、底价变化和冷却时间可调
 - 数据源状态：当前使用 Mock / Steam 适配层占位
 - Docker Compose：frontend、backend、worker、postgres、redis
 
@@ -59,6 +60,8 @@ docker compose up -d --build
 - `GET /api/items/{item_id}`
 - `GET /api/alerts`
 - `GET /api/push-records`
+- `GET /api/strategy`
+- `PUT /api/strategy`
 - `GET /api/opportunities`
 
 ## 推送配置
@@ -77,6 +80,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.3 — 增加策略配置读取/更新 API，前端策略页支持编辑告警阈值和冷却时间。
 - V0.1.2 — 增加微信 / QQ Webhook 推送适配、推送记录表和站内推送状态展示。
 - V0.1.1 — 忽略本地开发日志。
 - V0.1 — 初始化 FastAPI 后端、Vite 前端、行情快照、异动告警、机会榜、Docker Compose 和 README。

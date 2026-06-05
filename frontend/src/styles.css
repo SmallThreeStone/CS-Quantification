@@ -333,6 +333,56 @@ tbody tr.selected {
   margin-bottom: 14px;
 }
 
+.strategy-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #1b2634;
+  border-radius: 6px;
+  padding: 10px;
+  background: #101720;
+}
+
+.field span {
+  color: #8693a6;
+  font-size: 12px;
+}
+
+.field input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid #2a3749;
+  border-radius: 6px;
+  background: #0b1017;
+  color: #d7dde7;
+  padding: 0 9px;
+  font: inherit;
+}
+
+.settings-actions {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 160px;
+  gap: 12px;
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+.settings-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #2f8d76;
+  border-radius: 6px;
+  background: #1f6f5c;
+  cursor: pointer;
+}
+
 .push-table {
   margin-top: 18px;
 }
@@ -393,6 +443,10 @@ tbody tr.selected {
   }
 
   .push-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-actions {
     grid-template-columns: 1fr;
   }
 }

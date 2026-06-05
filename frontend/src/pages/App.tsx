@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import { AlertList } from "../components/AlertList";
 import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
-import type { Alert, ItemDetail, MonitorItem, PushRecord } from "../types";
+import type { Alert, ItemDetail, MonitorItem, PushRecord, StrategyConfig, StrategyConfigUpdate } from "../types";
 
 type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "settings" | "source";
 
@@ -14,6 +14,7 @@ export default function App() {
   const [items, setItems] = useState<MonitorItem[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
+  const [strategy, setStrategy] = useState<StrategyConfig | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,14 +23,16 @@ export default function App() {
   async function refresh() {
     setLoading(true);
     try {
-      const [nextItems, nextAlerts, nextPushRecords] = await Promise.all([
+      const [nextItems, nextAlerts, nextPushRecords, nextStrategy] = await Promise.all([
         api.monitor(),
         api.alerts(),
-        api.pushRecords()
+        api.pushRecords(),
+        api.strategy()
       ]);
       setItems(nextItems);
       setAlerts(nextAlerts);
       setPushRecords(nextPushRecords);
+      setStrategy(nextStrategy);
       if (!selectedId && nextItems[0]) {
         setSelectedId(nextItems[0].id);
       }
@@ -111,7 +114,7 @@ export default function App() {
         {tab === "detail" && <DetailView detail={detail} />}
         {tab === "alerts" && <AlertList alerts={alerts} />}
         {tab === "opportunities" && <OpportunityView items={items} onSelect={setSelectedId} setTab={setTab} />}
-        {tab === "settings" && <SettingsView />}
+        {tab === "settings" && <SettingsView strategy={strategy} onSaved={setStrategy} />}
         {tab === "source" && <SourceView items={items} alerts={alerts} pushRecords={pushRecords} />}
       </main>
     </div>
@@ -242,20 +245,137 @@ function OpportunityView({
   );
 }
 
-function SettingsView() {
+function SettingsView({
+  strategy,
+  onSaved
+}: {
+  strategy: StrategyConfig | null;
+  onSaved: (strategy: StrategyConfig) => void;
+}) {
+  const [form, setForm] = useState<StrategyConfigUpdate | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!strategy) {
+      return;
+    }
+    setForm({
+      min_absolute_sell_change: strategy.min_absolute_sell_change,
+      min_sell_change_rate: strategy.min_sell_change_rate,
+      min_price_change_rate: strategy.min_price_change_rate,
+      min_buy_change_rate: strategy.min_buy_change_rate,
+      cooldown_minutes: strategy.cooldown_minutes
+    });
+  }, [strategy]);
+
+  async function save() {
+    if (!form) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const saved = await api.updateStrategy(form);
+      onSaved(saved);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!form) {
+    return <div className="empty">策略配置加载中</div>;
+  }
+
   return (
     <section className="panel settings">
       <h2>默认策略</h2>
-      <div className="settings-grid">
-        <Metric label="在售绝对变化" value="30" />
-        <Metric label="在售变化率" value="12%" />
-        <Metric label="底价变化率" value="3.5%" />
-        <Metric label="求购变化率" value="12%" />
-        <Metric label="冷却时间" value="20 分钟" />
-        <Metric label="推送渠道" value="微信 / QQ 预留" />
+      <div className="strategy-form">
+        <NumberField
+          label="在售绝对变化"
+          value={form.min_absolute_sell_change}
+          min={1}
+          max={10000}
+          step={1}
+          onChange={(value) => setForm({ ...form, min_absolute_sell_change: value })}
+        />
+        <NumberField
+          label="在售变化率 %"
+          value={toPercent(form.min_sell_change_rate)}
+          min={1}
+          max={500}
+          step={1}
+          onChange={(value) => setForm({ ...form, min_sell_change_rate: fromPercent(value) })}
+        />
+        <NumberField
+          label="底价变化率 %"
+          value={toPercent(form.min_price_change_rate)}
+          min={0.1}
+          max={100}
+          step={0.1}
+          onChange={(value) => setForm({ ...form, min_price_change_rate: fromPercent(value) })}
+        />
+        <NumberField
+          label="求购变化率 %"
+          value={toPercent(form.min_buy_change_rate)}
+          min={1}
+          max={500}
+          step={1}
+          onChange={(value) => setForm({ ...form, min_buy_change_rate: fromPercent(value) })}
+        />
+        <NumberField
+          label="冷却时间 分钟"
+          value={form.cooldown_minutes}
+          min={0}
+          max={1440}
+          step={1}
+          onChange={(value) => setForm({ ...form, cooldown_minutes: value })}
+        />
+      </div>
+      <div className="settings-actions">
+        <Metric label="当前版本" value={strategy?.name ?? "default"} />
+        <button className="primary" onClick={save} disabled={saving}>
+          <Settings size={16} /> 保存策略
+        </button>
       </div>
     </section>
   );
+}
+
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input
+        type="number"
+        value={Number.isInteger(value) ? value : Number(value.toFixed(2))}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </label>
+  );
+}
+
+function toPercent(value: number) {
+  return value * 100;
+}
+
+function fromPercent(value: number) {
+  return Number((value / 100).toFixed(4));
 }
 
 function SourceView({
