@@ -23,6 +23,8 @@ import type {
 } from "../types";
 
 type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "items" | "backtests" | "settings" | "source";
+type MonitorSortKey = "activity" | "price" | "sell" | "buy" | "volume" | "buyScore" | "sellScore";
+type SortDirection = "asc" | "desc";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("monitor");
@@ -584,6 +586,27 @@ function MonitorView({
   selectedId?: number;
   onSelect: (id: number) => void;
 }) {
+  const [sortKey, setSortKey] = useState<MonitorSortKey>("activity");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const sorted = useMemo(() => {
+    return [...items].sort((left, right) => {
+      const delta = sortValue(left, sortKey) - sortValue(right, sortKey);
+      if (delta === 0) {
+        return left.display_name.localeCompare(right.display_name);
+      }
+      return sortDirection === "asc" ? delta : -delta;
+    });
+  }, [items, sortDirection, sortKey]);
+
+  function changeSort(nextKey: MonitorSortKey) {
+    if (nextKey === sortKey) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      return;
+    }
+    setSortKey(nextKey);
+    setSortDirection("desc");
+  }
+
   return (
     <section className="panel">
       <div className="table-wrap">
@@ -591,20 +614,20 @@ function MonitorView({
           <thead>
             <tr>
               <th>饰品</th>
-              <th>状态</th>
+              <SortableHead label="状态" active={sortKey === "activity"} direction={sortDirection} onClick={() => changeSort("activity")} />
               <th>可信度</th>
-              <th>底价</th>
-              <th>在售</th>
+              <SortableHead label="底价" active={sortKey === "price"} direction={sortDirection} onClick={() => changeSort("price")} />
+              <SortableHead label="在售" active={sortKey === "sell"} direction={sortDirection} onClick={() => changeSort("sell")} />
               <th>最高求购</th>
-              <th>求购</th>
-              <th>24h 成交</th>
+              <SortableHead label="求购" active={sortKey === "buy"} direction={sortDirection} onClick={() => changeSort("buy")} />
+              <SortableHead label="24h 成交" active={sortKey === "volume"} direction={sortDirection} onClick={() => changeSort("volume")} />
               <th>池</th>
-              <th>买入分</th>
-              <th>卖出分</th>
+              <SortableHead label="买入分" active={sortKey === "buyScore"} direction={sortDirection} onClick={() => changeSort("buyScore")} />
+              <SortableHead label="卖出分" active={sortKey === "sellScore"} direction={sortDirection} onClick={() => changeSort("sellScore")} />
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {sorted.map((item) => (
               <tr className={item.id === selectedId ? "selected" : ""} key={item.id} onClick={() => onSelect(item.id)}>
                 <td>
                   <strong>{item.display_name}</strong>
@@ -633,6 +656,49 @@ function MonitorView({
       </div>
     </section>
   );
+}
+
+function SortableHead({
+  label,
+  active,
+  direction,
+  onClick
+}: {
+  label: string;
+  active: boolean;
+  direction: SortDirection;
+  onClick: () => void;
+}) {
+  return (
+    <th>
+      <button className={`sort-head ${active ? "active" : ""}`} onClick={onClick}>
+        {label}
+        <span>{active ? (direction === "asc" ? "↑" : "↓") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
+function sortValue(item: MonitorItem, key: MonitorSortKey) {
+  if (key === "activity") {
+    return Math.max(item.adjusted_buy_score, item.adjusted_sell_score);
+  }
+  if (key === "price") {
+    return item.latest_snapshot?.lowest_price ?? -1;
+  }
+  if (key === "sell") {
+    return item.latest_snapshot?.sell_count ?? -1;
+  }
+  if (key === "buy") {
+    return item.latest_snapshot?.buy_count ?? -1;
+  }
+  if (key === "volume") {
+    return item.latest_snapshot?.volume_24h ?? -1;
+  }
+  if (key === "buyScore") {
+    return item.adjusted_buy_score;
+  }
+  return item.adjusted_sell_score;
 }
 
 function DetailView({ detail }: { detail: ItemDetail | null }) {
