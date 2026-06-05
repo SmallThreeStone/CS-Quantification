@@ -97,7 +97,7 @@ class PushService:
         return "\n".join(lines)
 
     def _history_summary(self, alert: Alert) -> list[str]:
-        groups = [("在售", "在售变化"), ("求购", "求购变化"), ("底价", "底价变化")]
+        groups = [("在售", "在售变化"), ("求购", "求购变化"), ("底价", "底价变化"), ("成交", "成交量异常")]
         lines = []
         for label, alert_type in groups:
             lines.append(f"{label}：")

@@ -23,4 +23,7 @@ def score_from_snapshot(snapshot: MarketSnapshot | None, alert: Alert | None) ->
     if alert and alert.direction == "偏扫货拉升":
         buy_score += 10
         sell_score += 8
+    if alert and alert.direction == "偏流动性异常":
+        buy_score -= 8
+        sell_score += 6
     return max(0, min(100, buy_score)), max(0, min(100, sell_score))

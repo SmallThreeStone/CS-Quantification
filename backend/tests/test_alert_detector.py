@@ -4,7 +4,15 @@ from app.models import Alert, Item, MarketSnapshot, Platform, StrategyConfig
 from app.services.alert_detector import AlertDetector
 
 
-def snapshot(item: Item, platform: Platform, price: float, sell: int, buy_price: float, buy: int) -> MarketSnapshot:
+def snapshot(
+    item: Item,
+    platform: Platform,
+    price: float,
+    sell: int,
+    buy_price: float,
+    buy: int,
+    volume: int = 10,
+) -> MarketSnapshot:
     row = MarketSnapshot(
         item_id=item.id,
         platform_id=platform.id,
@@ -12,7 +20,7 @@ def snapshot(item: Item, platform: Platform, price: float, sell: int, buy_price:
         sell_count=sell,
         highest_buy_price=buy_price,
         buy_count=buy,
-        volume_24h=10,
+        volume_24h=volume,
         avg_price_24h=price,
         captured_at=datetime.utcnow(),
     )
@@ -45,6 +53,21 @@ def test_price_drop_creates_price_alert(db_session):
     alerts = AlertDetector(db_session, config).detect(previous, current)
 
     assert any(alert.alert_type == "底价变化" for alert in alerts)
+
+
+def test_volume_jump_creates_liquidity_alert(db_session):
+    item = Item(id=1, market_hash_name="test", display_name="测试饰品")
+    platform = Platform(id=1, code="steam", name="Steam")
+    config = StrategyConfig(name="default", min_volume_change_rate=0.5)
+    previous = snapshot(item, platform, 100, 20, 95, 30, volume=20)
+    current = snapshot(item, platform, 101, 21, 96, 31, volume=45)
+
+    alerts = AlertDetector(db_session, config).detect(previous, current)
+
+    assert any(alert.alert_type == "成交量异常" for alert in alerts)
+    volume_alert = next(alert for alert in alerts if alert.alert_type == "成交量异常")
+    assert volume_alert.direction == "偏流动性异常"
+    assert volume_alert.absolute_change == 25
 
 
 def test_cooldown_downgrades_duplicate_alert(db_session):

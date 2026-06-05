@@ -31,6 +31,7 @@ def test_push_message_contains_decision_fields(db_session):
     assert "在售：" in message
     assert "求购：" in message
     assert "底价：" in message
+    assert "成交：" in message
 
 
 def test_push_message_groups_recent_history(db_session):
@@ -43,6 +44,7 @@ def test_push_message_groups_recent_history(db_session):
             history_alert(alert, platform, "在售变化", 300, 320, 20, datetime(2026, 6, 4, 18, 10)),
             history_alert(alert, platform, "求购变化", 106, 88, -18, datetime(2026, 6, 4, 13, 55)),
             history_alert(alert, platform, "底价变化", 294.5, 282, -12.5, datetime(2026, 6, 5, 10, 7)),
+            history_alert(alert, platform, "成交量异常", 20, 45, 25, datetime(2026, 6, 5, 10, 8)),
         ]
     )
     db_session.commit()
@@ -53,6 +55,7 @@ def test_push_message_groups_recent_history(db_session):
     assert "06-04 18:10" not in message
     assert "求购：\n06-04 13:55 106.00->88.00 (-18.00)" in message
     assert "底价：\n06-05 10:07 294.50->282.00 (-12.50)" in message
+    assert "成交：\n06-05 10:08 20.00->45.00 (+25.00)" in message
     assert "259.00->310.00" not in message
 
 

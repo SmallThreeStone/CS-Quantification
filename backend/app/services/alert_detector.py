@@ -17,6 +17,7 @@ class AlertDetector:
         alerts.extend(self._sell_count_alert(previous, current))
         alerts.extend(self._buy_count_alert(previous, current))
         alerts.extend(self._price_alert(previous, current))
+        alerts.extend(self._volume_alert(previous, current))
         return alerts
 
     def _sell_count_alert(self, previous: MarketSnapshot, current: MarketSnapshot) -> list[Alert]:
@@ -71,6 +72,25 @@ class AlertDetector:
                 direction,
                 previous.lowest_price,
                 current.lowest_price,
+                change,
+                rate,
+            )
+        ]
+
+    def _volume_alert(self, previous: MarketSnapshot, current: MarketSnapshot) -> list[Alert]:
+        change = current.volume_24h - previous.volume_24h
+        rate = change / max(previous.volume_24h, 1)
+        if abs(rate) < self._min_volume_change_rate:
+            return []
+        direction = "偏流动性异常" if change > 0 else "横盘观察"
+        return [
+            self._build_alert(
+                current,
+                "成交量异常",
+                "P1" if abs(rate) >= 1 else "P2",
+                direction,
+                previous.volume_24h,
+                current.volume_24h,
                 change,
                 rate,
             )
@@ -146,6 +166,10 @@ class AlertDetector:
     @property
     def _min_price_change_rate(self) -> float:
         return self.config.min_price_change_rate or 0.035
+
+    @property
+    def _min_volume_change_rate(self) -> float:
+        return self.config.min_volume_change_rate or 0.5
 
     @property
     def _cooldown_minutes(self) -> int:

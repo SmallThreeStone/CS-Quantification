@@ -703,6 +703,7 @@ function SettingsView({
       min_sell_change_rate: strategy.min_sell_change_rate,
       min_price_change_rate: strategy.min_price_change_rate,
       min_buy_change_rate: strategy.min_buy_change_rate,
+      min_volume_change_rate: strategy.min_volume_change_rate,
       cooldown_minutes: strategy.cooldown_minutes,
       quality_penalty_max: strategy.quality_penalty_max
     });
@@ -760,6 +761,14 @@ function SettingsView({
           max={500}
           step={1}
           onChange={(value) => setForm({ ...form, min_buy_change_rate: fromPercent(value) })}
+        />
+        <NumberField
+          label="成交量变化率 %"
+          value={toPercent(form.min_volume_change_rate)}
+          min={1}
+          max={1000}
+          step={1}
+          onChange={(value) => setForm({ ...form, min_volume_change_rate: fromPercent(value) })}
         />
         <NumberField
           label="冷却时间 分钟"
