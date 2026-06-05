@@ -73,6 +73,23 @@ class BacktestSummaryOut(BaseModel):
     avg_change_rate: float
 
 
+class HeatmapBucketOut(BaseModel):
+    hour: int
+    snapshot_count: int
+    avg_sell_count: float
+    avg_buy_count: float
+    avg_volume_24h: float
+    avg_lowest_price: float
+    max_sell_change: float
+    max_buy_change: float
+
+
+class AlertSummaryOut(BaseModel):
+    alert_type: str
+    total_count: int
+    recent_alerts: list[AlertOut]
+
+
 class CollectRunLogOut(BaseModel):
     id: int
     mode: str
@@ -175,6 +192,8 @@ class ItemDetailOut(BaseModel):
     sell_score: int
     snapshots: list[SnapshotOut]
     alerts: list[AlertOut]
+    heatmap: list[HeatmapBucketOut]
+    alert_summary: list[AlertSummaryOut]
 
 
 class HealthOut(BaseModel):

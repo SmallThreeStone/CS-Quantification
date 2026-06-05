@@ -1,4 +1,5 @@
 import { Activity, BarChart3, Bell, Database, Gauge, PackagePlus, RefreshCw, Settings, Target } from "lucide-react";
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { api } from "../api/client";
@@ -493,9 +494,69 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
         <MiniChart data={detail.snapshots} field="volume_24h" kind="bar" />
       </section>
       <section className="panel wide">
+        <h3>时间段热力图</h3>
+        <HeatmapView detail={detail} />
+      </section>
+      <section className="panel wide">
+        <h3>历史告警简报</h3>
+        <AlertSummaryView detail={detail} />
+      </section>
+      <section className="panel wide">
         <h3>历史告警</h3>
         <AlertList alerts={detail.alerts} />
       </section>
+    </div>
+  );
+}
+
+function HeatmapView({ detail }: { detail: ItemDetail }) {
+  const maxActivity = Math.max(
+    ...detail.heatmap.map((row) => row.max_sell_change + row.max_buy_change + row.avg_volume_24h),
+    1
+  );
+  if (!detail.heatmap.length) {
+    return <div className="empty-chart">暂无热力数据</div>;
+  }
+  return (
+    <div className="heatmap-grid">
+      {detail.heatmap.map((row) => {
+        const intensity = Math.min(1, (row.max_sell_change + row.max_buy_change + row.avg_volume_24h) / maxActivity);
+        return (
+          <div className="heat-cell" style={{ "--heat": intensity } as CSSProperties} key={row.hour}>
+            <strong>{String(row.hour).padStart(2, "0")}:00</strong>
+            <span>在售 {row.avg_sell_count.toFixed(0)}</span>
+            <span>求购 {row.avg_buy_count.toFixed(0)}</span>
+            <span>波动 {Math.max(row.max_sell_change, row.max_buy_change).toFixed(0)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AlertSummaryView({ detail }: { detail: ItemDetail }) {
+  if (!detail.alert_summary.length) {
+    return <div className="empty-chart">暂无告警简报</div>;
+  }
+  return (
+    <div className="summary-list">
+      {detail.alert_summary.map((group) => (
+        <div className="summary-row" key={group.alert_type}>
+          <div>
+            <strong>{group.alert_type}</strong>
+            <span>{group.total_count} 次</span>
+          </div>
+          <div className="summary-alerts">
+            {group.recent_alerts.map((alert) => (
+              <span className={alert.absolute_change >= 0 ? "up" : "down"} key={alert.id}>
+                {formatTime(alert.created_at)} {alert.previous_value.toFixed(0)}→{alert.current_value.toFixed(0)} (
+                {alert.absolute_change >= 0 ? "+" : ""}
+                {alert.absolute_change.toFixed(0)})
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -770,4 +831,13 @@ function formatHorizon(minutes: number) {
 
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatTime(value: string) {
+  const date = new Date(value);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${month}-${day} ${hour}:${minute}`;
 }

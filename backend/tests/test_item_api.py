@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
+from datetime import datetime
 
 from app.database import get_db
 from app.main import app
-from app.models import Item, MonitorPool
+from app.models import Alert, Item, MarketSnapshot, MonitorPool, Platform
 from tests.test_strategy_api import override_session
 
 
@@ -71,3 +72,78 @@ def test_monitor_pools_return_active_item_count(db_session):
     app.dependency_overrides.clear()
     assert response.status_code == 200
     assert response.json()[0]["active_item_count"] == 1
+
+
+def test_item_detail_returns_heatmap_and_alert_summary(db_session):
+    platform = Platform(code="steam", name="Steam")
+    item = Item(market_hash_name="heatmap-item", display_name="Heatmap Item")
+    db_session.add_all([platform, item])
+    db_session.flush()
+    first = MarketSnapshot(
+        item_id=item.id,
+        platform_id=platform.id,
+        lowest_price=100,
+        sell_count=20,
+        highest_buy_price=95,
+        buy_count=10,
+        volume_24h=5,
+        avg_price_24h=98,
+        captured_at=datetime(2026, 6, 5, 10, 0, 0),
+    )
+    second = MarketSnapshot(
+        item_id=item.id,
+        platform_id=platform.id,
+        lowest_price=110,
+        sell_count=35,
+        highest_buy_price=96,
+        buy_count=14,
+        volume_24h=7,
+        avg_price_24h=101,
+        captured_at=datetime(2026, 6, 5, 10, 30, 0),
+    )
+    db_session.add_all([first, second])
+    db_session.flush()
+    db_session.add_all(
+        [
+            Alert(
+                item_id=item.id,
+                platform_id=platform.id,
+                snapshot_id=second.id,
+                alert_type="sell_count_change",
+                title="sell changed",
+                detail="sell detail",
+                previous_value=20,
+                current_value=35,
+                absolute_change=15,
+                change_rate=0.75,
+                created_at=datetime(2026, 6, 5, 11, 0, 0),
+            ),
+            Alert(
+                item_id=item.id,
+                platform_id=platform.id,
+                snapshot_id=second.id,
+                alert_type="sell_count_change",
+                title="sell changed again",
+                detail="sell detail",
+                previous_value=35,
+                current_value=50,
+                absolute_change=15,
+                change_rate=0.42,
+                created_at=datetime(2026, 6, 5, 12, 0, 0),
+            ),
+        ]
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get(f"/api/items/{item.id}")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["heatmap"][0]["hour"] == 10
+    assert body["heatmap"][0]["snapshot_count"] == 2
+    assert body["heatmap"][0]["max_sell_change"] == 15
+    assert body["alert_summary"][0]["alert_type"] == "sell_count_change"
+    assert len(body["alert_summary"][0]["recent_alerts"]) == 2

@@ -64,6 +64,23 @@ export type BacktestSummary = {
   avg_change_rate: number;
 };
 
+export type HeatmapBucket = {
+  hour: number;
+  snapshot_count: number;
+  avg_sell_count: number;
+  avg_buy_count: number;
+  avg_volume_24h: number;
+  avg_lowest_price: number;
+  max_sell_change: number;
+  max_buy_change: number;
+};
+
+export type AlertSummary = {
+  alert_type: string;
+  total_count: number;
+  recent_alerts: Alert[];
+};
+
 export type CollectRun = {
   id: number;
   mode: string;
@@ -130,4 +147,6 @@ export type MonitorItem = {
 export type ItemDetail = MonitorItem & {
   snapshots: Snapshot[];
   alerts: Alert[];
+  heatmap: HeatmapBucket[];
+  alert_summary: AlertSummary[];
 };

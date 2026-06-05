@@ -286,6 +286,70 @@ tbody tr.selected {
   background: #101720;
 }
 
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.heat-cell {
+  --heat: 0;
+  display: grid;
+  gap: 4px;
+  min-height: 96px;
+  border: 1px solid #2a574f;
+  border-radius: 6px;
+  padding: 10px;
+  background:
+    linear-gradient(rgba(67, 210, 147, calc(var(--heat) * 0.3)), rgba(67, 210, 147, calc(var(--heat) * 0.3))),
+    #101720;
+}
+
+.heat-cell strong {
+  font-size: 15px;
+}
+
+.heat-cell span,
+.summary-row span {
+  color: #a8b4c5;
+  font-size: 12px;
+}
+
+.summary-list {
+  display: grid;
+  gap: 10px;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  border: 1px solid #1d2530;
+  border-radius: 6px;
+  padding: 10px;
+  background: #101720;
+}
+
+.summary-row strong,
+.summary-row span {
+  display: block;
+}
+
+.summary-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary-alerts span {
+  min-height: 24px;
+  border: 1px solid #243244;
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: #0d131c;
+}
+
 .alert-head,
 .alert-meta {
   display: flex;

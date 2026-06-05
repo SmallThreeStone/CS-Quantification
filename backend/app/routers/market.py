@@ -9,6 +9,8 @@ from app.schemas.market import (
     BacktestResultOut,
     BacktestSummaryOut,
     CollectRunLogOut,
+    AlertSummaryOut,
+    HeatmapBucketOut,
     HealthOut,
     ItemCreate,
     ItemDetailOut,
@@ -102,6 +104,8 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         sell_score=sell_score,
         snapshots=[SnapshotOut.model_validate(snapshot) for snapshot in reversed(snapshots)],
         alerts=[_alert_out(alert) for alert in alerts],
+        heatmap=_heatmap(list(reversed(snapshots))),
+        alert_summary=_alert_summary(alerts),
     )
 
 
@@ -284,6 +288,62 @@ def _backtest_out(row: BacktestResult) -> BacktestResultOut:
         alert_type=row.alert.alert_type,
         direction=row.alert.direction,
     )
+
+
+def _heatmap(snapshots: list[MarketSnapshot]) -> list[HeatmapBucketOut]:
+    buckets: dict[int, dict[str, float]] = {}
+    previous_by_hour: dict[int, MarketSnapshot] = {}
+    for snapshot in snapshots:
+        hour = snapshot.captured_at.hour
+        bucket = buckets.setdefault(
+            hour,
+            {
+                "snapshot_count": 0,
+                "sell_count": 0,
+                "buy_count": 0,
+                "volume_24h": 0,
+                "lowest_price": 0,
+                "max_sell_change": 0,
+                "max_buy_change": 0,
+            },
+        )
+        bucket["snapshot_count"] += 1
+        bucket["sell_count"] += snapshot.sell_count
+        bucket["buy_count"] += snapshot.buy_count
+        bucket["volume_24h"] += snapshot.volume_24h
+        bucket["lowest_price"] += snapshot.lowest_price
+        previous = previous_by_hour.get(hour)
+        if previous is not None:
+            bucket["max_sell_change"] = max(bucket["max_sell_change"], abs(snapshot.sell_count - previous.sell_count))
+            bucket["max_buy_change"] = max(bucket["max_buy_change"], abs(snapshot.buy_count - previous.buy_count))
+        previous_by_hour[hour] = snapshot
+    return [
+        HeatmapBucketOut(
+            hour=hour,
+            snapshot_count=int(row["snapshot_count"]),
+            avg_sell_count=row["sell_count"] / row["snapshot_count"],
+            avg_buy_count=row["buy_count"] / row["snapshot_count"],
+            avg_volume_24h=row["volume_24h"] / row["snapshot_count"],
+            avg_lowest_price=row["lowest_price"] / row["snapshot_count"],
+            max_sell_change=row["max_sell_change"],
+            max_buy_change=row["max_buy_change"],
+        )
+        for hour, row in sorted(buckets.items())
+    ]
+
+
+def _alert_summary(alerts: list[Alert]) -> list[AlertSummaryOut]:
+    grouped: dict[str, list[Alert]] = {}
+    for alert in alerts:
+        grouped.setdefault(alert.alert_type, []).append(alert)
+    return [
+        AlertSummaryOut(
+            alert_type=alert_type,
+            total_count=len(rows),
+            recent_alerts=[_alert_out(alert) for alert in rows[:3]],
+        )
+        for alert_type, rows in sorted(grouped.items(), key=lambda item: len(item[1]), reverse=True)
+    ]
 
 
 def _ensure_pool(db: Session, pool_id: int | None) -> None:
