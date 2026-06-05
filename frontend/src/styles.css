@@ -464,8 +464,27 @@ tbody tr.selected {
   font-size: 13px;
 }
 
-.opportunity-grid,
 .settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.opportunity-sections {
+  display: grid;
+  gap: 14px;
+}
+
+.opportunity-section {
+  display: grid;
+  gap: 12px;
+}
+
+.opportunity-section .section-head {
+  margin-bottom: 0;
+}
+
+.opportunity-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
@@ -484,6 +503,13 @@ tbody tr.selected {
 
 .opportunity:hover {
   border-color: #2a86c9;
+}
+
+.compact-empty {
+  min-height: 72px;
+  border: 1px dashed #253246;
+  border-radius: 6px;
+  background: #101720;
 }
 
 .opportunity > div {

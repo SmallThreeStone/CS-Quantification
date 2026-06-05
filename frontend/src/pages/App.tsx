@@ -811,29 +811,80 @@ function OpportunityView({
   onSelect: (id: number) => void;
   setTab: (tab: Tab) => void;
 }) {
-  const sorted = [...items].sort(
-    (a, b) => Math.max(b.adjusted_buy_score, b.adjusted_sell_score) - Math.max(a.adjusted_buy_score, a.adjusted_sell_score)
-  );
+  const groups = opportunityGroups(items);
   return (
-    <div className="opportunity-grid">
-      {sorted.map((item) => (
-        <button
-          className="opportunity"
-          key={item.id}
-          onClick={() => {
-            onSelect(item.id);
-            setTab("detail");
-          }}
-        >
-          <strong>{item.display_name}</strong>
-          <span>{item.status}</span>
-          <div>
-            <Metric label="买入" value={String(item.adjusted_buy_score)} tone="up" />
-            <Metric label="卖出" value={String(item.adjusted_sell_score)} tone="down" />
+    <div className="opportunity-sections">
+      {groups.map((group) => (
+        <section className="panel opportunity-section" key={group.title}>
+          <div className="section-head">
+            <h2>{group.title}</h2>
+            <span className="tag">{group.items.length} 个</span>
           </div>
-        </button>
+          {group.items.length ? (
+            <div className="opportunity-grid">
+              {group.items.map((item) => (
+                <OpportunityCard item={item} key={item.id} onSelect={onSelect} setTab={setTab} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty compact-empty">暂无匹配饰品</div>
+          )}
+        </section>
       ))}
     </div>
+  );
+}
+
+function OpportunityCard({
+  item,
+  onSelect,
+  setTab
+}: {
+  item: MonitorItem;
+  onSelect: (id: number) => void;
+  setTab: (tab: Tab) => void;
+}) {
+  return (
+    <button
+      className="opportunity"
+      onClick={() => {
+        onSelect(item.id);
+        setTab("detail");
+      }}
+    >
+      <strong>{item.display_name}</strong>
+      <span>{item.status}</span>
+      <div>
+        <Metric label="买入" value={String(item.adjusted_buy_score)} tone="up" />
+        <Metric label="卖出" value={String(item.adjusted_sell_score)} tone="down" />
+      </div>
+    </button>
+  );
+}
+
+function opportunityGroups(items: MonitorItem[]) {
+  const buy = items.filter((item) => item.status === "偏买入机会");
+  const sellPressure = items.filter((item) => item.status === "偏卖压风险");
+  const sweep = items.filter((item) => item.status === "偏扫货拉升");
+  const abnormal = items.filter(
+    (item) =>
+      item.status === "偏流动性异常" ||
+      (item.status === "横盘观察" && Math.max(item.adjusted_buy_score, item.adjusted_sell_score) >= 70)
+  );
+  const grouped = new Set([...buy, ...sellPressure, ...sweep, ...abnormal].map((item) => item.id));
+  const watch = items.filter((item) => !grouped.has(item.id));
+  return [
+    { title: "买入机会榜", items: sortOpportunities(buy) },
+    { title: "卖压风险榜", items: sortOpportunities(sellPressure) },
+    { title: "扫货拉升榜", items: sortOpportunities(sweep) },
+    { title: "异常波动榜", items: sortOpportunities(abnormal) },
+    { title: "观察候选", items: sortOpportunities(watch).slice(0, 8) },
+  ];
+}
+
+function sortOpportunities(items: MonitorItem[]) {
+  return [...items].sort(
+    (a, b) => Math.max(b.adjusted_buy_score, b.adjusted_sell_score) - Math.max(a.adjusted_buy_score, a.adjusted_sell_score)
   );
 }
 
