@@ -116,7 +116,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.8 — Docker Compose 生产可用性增强
+V0.1.9 — 数据库迁移基线
 
 ## 环境要求
 

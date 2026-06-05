@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.8 — Docker Compose 生产可用性增强
+V0.1.9 — 数据库迁移基线
 
 ## 功能范围
 
@@ -20,6 +20,7 @@ V0.1.8 — Docker Compose 生产可用性增强
 - 告警回测：记录告警后多窗口价格变化、胜率和平均变化
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
 - 数据源状态：当前使用 Mock / Steam 适配层占位
+- 数据库迁移：Alembic 基线迁移，后端容器启动前自动执行迁移
 - Docker Compose：frontend、backend、worker、postgres、redis
 
 ## 环境变量
@@ -57,6 +58,15 @@ npm run dev
 ```bash
 curl -X POST http://localhost:8000/api/collect
 ```
+
+### 数据库迁移
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+Docker 部署时后端容器会自动执行迁移；`requirements.txt`、`Dockerfile` 或迁移文件变化后需要重建后端镜像。
 
 ## Docker Compose
 
@@ -112,6 +122,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.9 — 增加 Alembic 迁移基线、迁移启动器和迁移自测，后端容器启动前自动升级数据库。
 - V0.1.8 — 增强 Docker Compose 健康检查、重启策略、环境变量模板和部署验证脚本。
 - V0.1.7 — 增加采集运行日志、采集状态 API 和数据源状态页采集记录展示。
 - V0.1.6 — 增加告警回测结果表、回测服务、回测 API 和前端回测页。
