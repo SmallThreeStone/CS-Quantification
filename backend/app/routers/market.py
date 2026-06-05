@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Alert, Item, MarketSnapshot, MonitorPool, Platform, PushRecord
+from app.models import Alert, BacktestResult, Item, MarketSnapshot, MonitorPool, Platform, PushRecord
 from app.models import StrategyConfig
 from app.schemas.market import (
     AlertOut,
+    BacktestResultOut,
+    BacktestSummaryOut,
     HealthOut,
     ItemCreate,
     ItemDetailOut,
@@ -19,6 +21,7 @@ from app.schemas.market import (
     StrategyConfigUpdate,
 )
 from app.services.market_service import MarketService
+from app.services.backtest_service import BacktestService
 from app.services.push_service import PushService
 from app.services.score_service import score_from_snapshot, status_from_alert
 
@@ -34,6 +37,7 @@ def health() -> HealthOut:
 def collect(db: Session = Depends(get_db)) -> list[AlertOut]:
     alerts = MarketService(db).collect_active_items()
     PushService(db).dispatch_alerts(alerts)
+    BacktestService(db).evaluate_due_alerts()
     return [_alert_out(alert) for alert in alerts]
 
 
@@ -157,6 +161,23 @@ def push_records(db: Session = Depends(get_db)) -> list[PushRecordOut]:
     return db.query(PushRecord).order_by(PushRecord.created_at.desc()).limit(100).all()
 
 
+@router.get("/backtests", response_model=list[BacktestResultOut])
+def backtests(db: Session = Depends(get_db)) -> list[BacktestResultOut]:
+    rows = db.query(BacktestResult).order_by(BacktestResult.created_at.desc()).limit(200).all()
+    return [_backtest_out(row) for row in rows]
+
+
+@router.get("/backtests/summary", response_model=list[BacktestSummaryOut])
+def backtest_summary(db: Session = Depends(get_db)) -> list[dict]:
+    return BacktestService(db).summary()
+
+
+@router.post("/backtests/evaluate", response_model=list[BacktestResultOut])
+def evaluate_backtests(db: Session = Depends(get_db)) -> list[BacktestResultOut]:
+    rows = BacktestService(db).evaluate_due_alerts()
+    return [_backtest_out(row) for row in rows]
+
+
 @router.get("/strategy", response_model=StrategyConfigOut)
 def strategy(db: Session = Depends(get_db)) -> StrategyConfig:
     return _default_strategy(db)
@@ -236,6 +257,25 @@ def _item_out(item: Item) -> ItemOut:
         is_active=item.is_active,
         pool_id=item.pool_id,
         pool_name=item.pool.name if item.pool else None,
+    )
+
+
+def _backtest_out(row: BacktestResult) -> BacktestResultOut:
+    return BacktestResultOut(
+        id=row.id,
+        alert_id=row.alert_id,
+        item_id=row.item_id,
+        platform_id=row.platform_id,
+        horizon_minutes=row.horizon_minutes,
+        entry_price=row.entry_price,
+        exit_price=row.exit_price,
+        price_change=row.price_change,
+        change_rate=row.change_rate,
+        evaluated_at=row.evaluated_at,
+        created_at=row.created_at,
+        item_name=row.item.display_name,
+        alert_type=row.alert.alert_type,
+        direction=row.alert.direction,
     )
 
 

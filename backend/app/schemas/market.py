@@ -47,6 +47,32 @@ class PushRecordOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BacktestResultOut(BaseModel):
+    id: int
+    alert_id: int
+    item_id: int
+    platform_id: int
+    horizon_minutes: int
+    entry_price: float
+    exit_price: float
+    price_change: float
+    change_rate: float
+    evaluated_at: datetime
+    created_at: datetime
+    item_name: str
+    alert_type: str
+    direction: str
+
+
+class BacktestSummaryOut(BaseModel):
+    alert_type: str
+    horizon_minutes: int
+    sample_count: int
+    win_count: int
+    win_rate: float
+    avg_change_rate: float
+
+
 class StrategyConfigOut(BaseModel):
     id: int
     name: str

@@ -333,6 +333,28 @@ tbody tr.selected {
   margin-bottom: 14px;
 }
 
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.compact-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 118px;
+  height: 36px;
+  border: 1px solid #2f8d76;
+  border-radius: 6px;
+  background: #1f6f5c;
+  color: #d7dde7;
+  cursor: pointer;
+}
+
 .strategy-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

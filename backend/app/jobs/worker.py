@@ -2,6 +2,7 @@ import time
 
 from app.database import SessionLocal
 from app.main import create_app
+from app.services.backtest_service import BacktestService
 from app.services.market_service import MarketService
 from app.services.push_service import PushService
 
@@ -12,6 +13,7 @@ def run_once() -> int:
     try:
         alerts = MarketService(db).collect_due_pools()
         PushService(db).dispatch_alerts(alerts)
+        BacktestService(db).evaluate_due_alerts()
         return len(alerts)
     finally:
         db.close()

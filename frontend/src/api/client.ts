@@ -1,5 +1,7 @@
 import type {
   Alert,
+  BacktestResult,
+  BacktestSummary,
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
@@ -25,6 +27,9 @@ export const api = {
   collect: () => request<Alert[]>("/api/collect", { method: "POST" }),
   monitor: () => request<MonitorItem[]>("/api/monitor"),
   alerts: () => request<Alert[]>("/api/alerts"),
+  backtests: () => request<BacktestResult[]>("/api/backtests"),
+  backtestSummary: () => request<BacktestSummary[]>("/api/backtests/summary"),
+  evaluateBacktests: () => request<BacktestResult[]>("/api/backtests/evaluate", { method: "POST" }),
   pushRecords: () => request<PushRecord[]>("/api/push-records"),
   items: () => request<ManagedItem[]>("/api/items"),
   monitorPools: () => request<MonitorPool[]>("/api/monitor-pools"),

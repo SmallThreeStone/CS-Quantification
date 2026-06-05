@@ -99,6 +99,26 @@ class PushRecord(Base):
     alert: Mapped[Alert] = relationship()
 
 
+class BacktestResult(Base):
+    __tablename__ = "backtest_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    alert_id: Mapped[int] = mapped_column(ForeignKey("alerts.id"), index=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"), index=True)
+    platform_id: Mapped[int] = mapped_column(ForeignKey("platforms.id"), index=True)
+    horizon_minutes: Mapped[int] = mapped_column(Integer, index=True)
+    entry_price: Mapped[float] = mapped_column(Float)
+    exit_price: Mapped[float] = mapped_column(Float)
+    price_change: Mapped[float] = mapped_column(Float)
+    change_rate: Mapped[float] = mapped_column(Float)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+    alert: Mapped[Alert] = relationship()
+    item: Mapped[Item] = relationship()
+    platform: Mapped[Platform] = relationship()
+
+
 class StrategyConfig(Base):
     __tablename__ = "strategy_configs"
 

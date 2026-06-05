@@ -1,3 +1,12 @@
-from app.models.market import Alert, Item, MarketSnapshot, MonitorPool, Platform, PushRecord, StrategyConfig
+from app.models.market import Alert, BacktestResult, Item, MarketSnapshot, MonitorPool, Platform, PushRecord, StrategyConfig
 
-__all__ = ["Alert", "Item", "MarketSnapshot", "MonitorPool", "Platform", "PushRecord", "StrategyConfig"]
+__all__ = [
+    "Alert",
+    "BacktestResult",
+    "Item",
+    "MarketSnapshot",
+    "MonitorPool",
+    "Platform",
+    "PushRecord",
+    "StrategyConfig",
+]

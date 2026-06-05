@@ -1,4 +1,4 @@
-import { Activity, Bell, Database, Gauge, PackagePlus, RefreshCw, Settings, Target } from "lucide-react";
+import { Activity, BarChart3, Bell, Database, Gauge, PackagePlus, RefreshCw, Settings, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { api } from "../api/client";
@@ -7,6 +7,8 @@ import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
 import type {
   Alert,
+  BacktestResult,
+  BacktestSummary,
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
@@ -17,7 +19,7 @@ import type {
   StrategyConfigUpdate
 } from "../types";
 
-type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "items" | "settings" | "source";
+type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "items" | "backtests" | "settings" | "source";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("monitor");
@@ -26,6 +28,8 @@ export default function App() {
   const [pools, setPools] = useState<MonitorPool[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
+  const [backtests, setBacktests] = useState<BacktestResult[]>([]);
+  const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
   const [strategy, setStrategy] = useState<StrategyConfig | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<ItemDetail | null>(null);
@@ -35,12 +39,23 @@ export default function App() {
   async function refresh() {
     setLoading(true);
     try {
-      const [nextItems, nextManagedItems, nextPools, nextAlerts, nextPushRecords, nextStrategy] = await Promise.all([
+      const [
+        nextItems,
+        nextManagedItems,
+        nextPools,
+        nextAlerts,
+        nextPushRecords,
+        nextBacktests,
+        nextBacktestSummary,
+        nextStrategy
+      ] = await Promise.all([
         api.monitor(),
         api.items(),
         api.monitorPools(),
         api.alerts(),
         api.pushRecords(),
+        api.backtests(),
+        api.backtestSummary(),
         api.strategy()
       ]);
       setItems(nextItems);
@@ -48,6 +63,8 @@ export default function App() {
       setPools(nextPools);
       setAlerts(nextAlerts);
       setPushRecords(nextPushRecords);
+      setBacktests(nextBacktests);
+      setBacktestSummary(nextBacktestSummary);
       setStrategy(nextStrategy);
       if (!selectedId && nextItems[0]) {
         setSelectedId(nextItems[0].id);
@@ -61,6 +78,16 @@ export default function App() {
     setLoading(true);
     try {
       await api.collect();
+      await refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function evaluateBacktests() {
+    setLoading(true);
+    try {
+      await api.evaluateBacktests();
       await refresh();
     } finally {
       setLoading(false);
@@ -104,6 +131,9 @@ export default function App() {
           <button className={tab === "items" ? "active" : ""} onClick={() => setTab("items")}>
             <PackagePlus size={18} /> 饰品管理
           </button>
+          <button className={tab === "backtests" ? "active" : ""} onClick={() => setTab("backtests")}>
+            <BarChart3 size={18} /> 告警回测
+          </button>
           <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
             <Settings size={18} /> 策略配置
           </button>
@@ -134,9 +164,96 @@ export default function App() {
         {tab === "alerts" && <AlertList alerts={alerts} />}
         {tab === "opportunities" && <OpportunityView items={items} onSelect={setSelectedId} setTab={setTab} />}
         {tab === "items" && <ItemManager items={managedItems} pools={pools} onChanged={refresh} />}
+        {tab === "backtests" && (
+          <BacktestView summary={backtestSummary} results={backtests} onEvaluate={evaluateBacktests} loading={loading} />
+        )}
         {tab === "settings" && <SettingsView strategy={strategy} onSaved={setStrategy} />}
         {tab === "source" && <SourceView items={items} pools={pools} alerts={alerts} pushRecords={pushRecords} />}
       </main>
+    </div>
+  );
+}
+
+function BacktestView({
+  summary,
+  results,
+  onEvaluate,
+  loading
+}: {
+  summary: BacktestSummary[];
+  results: BacktestResult[];
+  onEvaluate: () => Promise<void>;
+  loading: boolean;
+}) {
+  return (
+    <div className="detail-grid">
+      <section className="panel wide">
+        <div className="section-head">
+          <h2>回测汇总</h2>
+          <button className="primary compact-button" onClick={onEvaluate} disabled={loading}>
+            <BarChart3 size={16} /> 刷新回测
+          </button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>类型</th>
+                <th>窗口</th>
+                <th>样本</th>
+                <th>命中</th>
+                <th>胜率</th>
+                <th>平均变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.map((row) => (
+                <tr key={`${row.alert_type}-${row.horizon_minutes}`}>
+                  <td>{row.alert_type}</td>
+                  <td>{formatHorizon(row.horizon_minutes)}</td>
+                  <td>{row.sample_count}</td>
+                  <td>{row.win_count}</td>
+                  <td>{formatPercent(row.win_rate)}</td>
+                  <td className={row.avg_change_rate >= 0 ? "up" : "down"}>{formatPercent(row.avg_change_rate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!summary.length && <div className="empty">暂无可评估回测</div>}
+      </section>
+      <section className="panel wide">
+        <h2>最近结果</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>饰品</th>
+                <th>类型</th>
+                <th>判断</th>
+                <th>窗口</th>
+                <th>入场</th>
+                <th>评估</th>
+                <th>变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.item_name}</td>
+                  <td>{row.alert_type}</td>
+                  <td>{row.direction}</td>
+                  <td>{formatHorizon(row.horizon_minutes)}</td>
+                  <td>¥{row.entry_price.toFixed(2)}</td>
+                  <td>¥{row.exit_price.toFixed(2)}</td>
+                  <td className={row.change_rate >= 0 ? "up" : "down"}>{formatPercent(row.change_rate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!results.length && <div className="empty">暂无回测结果</div>}
+      </section>
     </div>
   );
 }
@@ -605,8 +722,23 @@ function title(tab: Tab) {
     alerts: "异动告警",
     opportunities: "机会榜",
     items: "饰品管理",
+    backtests: "告警回测",
     settings: "策略配置",
     source: "数据源状态"
   };
   return map[tab];
+}
+
+function formatHorizon(minutes: number) {
+  if (minutes < 60) {
+    return `${minutes} 分钟`;
+  }
+  if (minutes < 1440) {
+    return `${minutes / 60} 小时`;
+  }
+  return `${minutes / 1440} 天`;
+}
+
+function formatPercent(value: number) {
+  return `${(value * 100).toFixed(2)}%`;
 }

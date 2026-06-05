@@ -38,6 +38,32 @@ export type PushRecord = {
   sent_at: string | null;
 };
 
+export type BacktestResult = {
+  id: number;
+  alert_id: number;
+  item_id: number;
+  platform_id: number;
+  horizon_minutes: number;
+  entry_price: number;
+  exit_price: number;
+  price_change: number;
+  change_rate: number;
+  evaluated_at: string;
+  created_at: string;
+  item_name: string;
+  alert_type: string;
+  direction: string;
+};
+
+export type BacktestSummary = {
+  alert_type: string;
+  horizon_minutes: number;
+  sample_count: number;
+  win_count: number;
+  win_rate: number;
+  avg_change_rate: number;
+};
+
 export type StrategyConfig = {
   id: number;
   name: string;
