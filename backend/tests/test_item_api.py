@@ -183,3 +183,43 @@ def test_discover_item_steam_nameid_returns_bad_gateway_on_failure(db_session, m
 
     app.dependency_overrides.clear()
     assert response.status_code == 502
+
+
+def test_validate_item_steam_nameid_returns_orderbook_metrics(db_session, monkeypatch):
+    item = Item(market_hash_name="AK-47 | Test", display_name="Test", steam_item_nameid="12345")
+    db_session.add(item)
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    monkeypatch.setattr(
+        "app.routers.market.SteamNameIdService.validate_orderbook",
+        lambda self, steam_item_nameid: {"sell_count": 8, "buy_count": 9, "highest_buy_price": 99.0},
+    )
+
+    response = client.post(f"/api/items/{item.id}/steam-nameid/validate")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert response.json()["sell_count"] == 8
+    assert response.json()["buy_count"] == 9
+
+
+def test_validate_item_steam_nameid_returns_error_payload(db_session, monkeypatch):
+    item = Item(market_hash_name="AK-47 | Test", display_name="Test", steam_item_nameid="")
+    db_session.add(item)
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    def fail(self, steam_item_nameid):
+        raise ValueError("missing steam item_nameid")
+
+    monkeypatch.setattr("app.routers.market.SteamNameIdService.validate_orderbook", fail)
+
+    response = client.post(f"/api/items/{item.id}/steam-nameid/validate")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["ok"] is False
+    assert response.json()["error"] == "missing steam item_nameid"

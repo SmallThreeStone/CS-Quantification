@@ -289,6 +289,8 @@ function ItemManager({
   const [form, setForm] = useState<ManagedItemInput>(emptyItem);
   const [saving, setSaving] = useState(false);
   const [discoveringId, setDiscoveringId] = useState<number | null>(null);
+  const [validatingId, setValidatingId] = useState<number | null>(null);
+  const [validationMessage, setValidationMessage] = useState("");
 
   function edit(item: ManagedItem) {
     setEditingId(item.id);
@@ -333,6 +335,21 @@ function ItemManager({
       alert(error instanceof Error ? error.message : "Steam NameID 发现失败");
     } finally {
       setDiscoveringId(null);
+    }
+  }
+
+  async function validate(item: ManagedItem) {
+    setValidatingId(item.id);
+    setValidationMessage("");
+    try {
+      const result = await api.validateSteamNameId(item.id);
+      setValidationMessage(
+        result.ok
+          ? `${item.display_name} 订单簿可用：在售 ${result.sell_count}，求购 ${result.buy_count}，最高求购 ¥${result.highest_buy_price.toFixed(2)}`
+          : `${item.display_name} 订单簿不可用：${result.error}`
+      );
+    } finally {
+      setValidatingId(null);
     }
   }
 
@@ -393,6 +410,7 @@ function ItemManager({
       </div>
 
       <div className="table-wrap">
+        {validationMessage && <div className="inline-status">{validationMessage}</div>}
         <table>
           <thead>
             <tr>
@@ -422,6 +440,9 @@ function ItemManager({
                     <button onClick={() => edit(item)}>编辑</button>
                     <button onClick={() => discover(item)} disabled={discoveringId === item.id}>
                       {discoveringId === item.id ? "发现中" : "发现ID"}
+                    </button>
+                    <button onClick={() => validate(item)} disabled={validatingId === item.id}>
+                      {validatingId === item.id ? "验证中" : "验深度"}
                     </button>
                     <button onClick={() => toggle(item)}>{item.is_active ? "停用" : "恢复"}</button>
                   </div>

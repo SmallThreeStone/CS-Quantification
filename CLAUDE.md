@@ -116,7 +116,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.14 — Steam NameID 自动发现
+V0.1.15 — Steam 订单簿验证闭环
 
 ## 环境要求
 

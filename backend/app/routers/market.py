@@ -16,6 +16,7 @@ from app.schemas.market import (
     ItemDetailOut,
     ItemOut,
     ItemUpdate,
+    SteamOrderbookValidationOut,
     SteamNameIdOut,
     MonitorPoolOut,
     MonitorItemOut,
@@ -160,6 +161,32 @@ def discover_item_steam_nameid(item_id: int, db: Session = Depends(get_db)) -> S
         item_id=item.id,
         market_hash_name=item.market_hash_name,
         steam_item_nameid=item.steam_item_nameid,
+    )
+
+
+@router.post("/items/{item_id}/steam-nameid/validate", response_model=SteamOrderbookValidationOut)
+def validate_item_steam_nameid(item_id: int, db: Session = Depends(get_db)) -> SteamOrderbookValidationOut:
+    item = db.get(Item, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="item not found")
+    try:
+        orderbook = SteamNameIdService().validate_orderbook(item.steam_item_nameid)
+    except Exception as exc:
+        return SteamOrderbookValidationOut(
+            item_id=item.id,
+            market_hash_name=item.market_hash_name,
+            steam_item_nameid=item.steam_item_nameid,
+            ok=False,
+            error=str(exc),
+        )
+    return SteamOrderbookValidationOut(
+        item_id=item.id,
+        market_hash_name=item.market_hash_name,
+        steam_item_nameid=item.steam_item_nameid,
+        ok=True,
+        sell_count=orderbook["sell_count"],
+        buy_count=orderbook["buy_count"],
+        highest_buy_price=orderbook["highest_buy_price"],
     )
 
 

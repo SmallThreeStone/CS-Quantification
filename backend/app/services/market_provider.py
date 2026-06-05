@@ -7,6 +7,7 @@ from datetime import datetime
 import httpx
 
 from app.config import settings
+from app.services.steam_nameid_service import SteamNameIdService
 
 
 @dataclass
@@ -83,6 +84,7 @@ class SteamMarketProvider:
     def __init__(self) -> None:
         self.fallback = MockMarketProvider()
         self.item_nameids = self._load_item_nameids()
+        self.nameid_service = SteamNameIdService()
 
     def fetch_quote(self, market_hash_name: str, steam_item_nameid: str = "") -> Quote:
         payload = self._priceoverview(market_hash_name)
@@ -104,8 +106,9 @@ class SteamMarketProvider:
         orderbook_error = ""
         if settings.steam_orderbook_enabled:
             try:
-                orderbook_payload = self._orderbook(market_hash_name, steam_item_nameid)
-                orderbook = self._parse_orderbook(orderbook_payload)
+                item_nameid = self._item_nameid(market_hash_name, steam_item_nameid)
+                orderbook_payload = self.nameid_service.fetch_orderbook(item_nameid)
+                orderbook = self.nameid_service.parse_orderbook(orderbook_payload)
             except Exception as exc:
                 orderbook_error = str(exc)
         if payload.get("lowest_price"):
@@ -156,42 +159,11 @@ class SteamMarketProvider:
         response.raise_for_status()
         return response.json()
 
-    def _orderbook(self, market_hash_name: str, steam_item_nameid: str = "") -> dict:
+    def _item_nameid(self, market_hash_name: str, steam_item_nameid: str = "") -> str:
         item_nameid = steam_item_nameid or self.item_nameids.get(market_hash_name)
         if not item_nameid:
             raise ValueError("missing steam item_nameid mapping")
-        response = httpx.get(
-            "https://steamcommunity.com/market/itemordershistogram",
-            params={
-                "country": "CN",
-                "language": "schinese",
-                "currency": 23,
-                "item_nameid": item_nameid,
-            },
-            timeout=8,
-        )
-        response.raise_for_status()
-        return response.json()
-
-    def _parse_orderbook(self, payload: dict) -> dict | None:
-        sell_orders = payload.get("sell_order_graph") or []
-        buy_orders = payload.get("buy_order_graph") or []
-        if not sell_orders and not buy_orders:
-            return None
-        sell_count = self._total_order_count(sell_orders)
-        buy_count = self._total_order_count(buy_orders)
-        highest_buy_price = float(buy_orders[0][0]) if buy_orders else 0
-        return {"sell_count": sell_count, "buy_count": buy_count, "highest_buy_price": round(highest_buy_price, 2)}
-
-    def _total_order_count(self, rows: list[list]) -> int:
-        counts = []
-        for row in rows:
-            if len(row) >= 2:
-                try:
-                    counts.append(int(float(row[1])))
-                except (TypeError, ValueError):
-                    pass
-        return max(counts, default=0)
+        return item_nameid
 
     def _load_item_nameids(self) -> dict[str, str]:
         try:

@@ -142,6 +142,15 @@ h3 {
   overflow-x: auto;
 }
 
+.inline-status {
+  margin-bottom: 10px;
+  border: 1px solid #25374c;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #101720;
+  color: #c7d2e2;
+}
+
 table {
   width: 100%;
   min-width: 980px;

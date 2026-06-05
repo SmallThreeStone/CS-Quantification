@@ -54,6 +54,17 @@ export const api = {
       `/api/items/${id}/steam-nameid/discover`,
       { method: "POST" }
     ),
+  validateSteamNameId: (id: number) =>
+    request<{
+      item_id: number;
+      market_hash_name: string;
+      steam_item_nameid: string;
+      ok: boolean;
+      sell_count: number;
+      buy_count: number;
+      highest_buy_price: number;
+      error: string;
+    }>(`/api/items/${id}/steam-nameid/validate`, { method: "POST" }),
   strategy: () => request<StrategyConfig>("/api/strategy"),
   updateStrategy: (payload: StrategyConfigUpdate) =>
     request<StrategyConfig>("/api/strategy", {

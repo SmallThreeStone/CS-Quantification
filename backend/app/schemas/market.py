@@ -170,6 +170,17 @@ class SteamNameIdOut(BaseModel):
     steam_item_nameid: str
 
 
+class SteamOrderbookValidationOut(BaseModel):
+    item_id: int
+    market_hash_name: str
+    steam_item_nameid: str
+    ok: bool
+    sell_count: int = 0
+    buy_count: int = 0
+    highest_buy_price: float = 0
+    error: str = ""
+
+
 class MonitorPoolOut(BaseModel):
     id: int
     name: str
