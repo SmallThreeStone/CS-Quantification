@@ -1,52 +1,89 @@
 services:
   postgres:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: cs_quant
-      POSTGRES_USER: cs_quant
-      POSTGRES_PASSWORD: cs_quant_password
+      POSTGRES_DB: ${POSTGRES_DB:-cs_quant}
+      POSTGRES_USER: ${POSTGRES_USER:-cs_quant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cs_quant_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: ./backend
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://cs_quant:cs_quant_password@postgres:5432/cs_quant
-      CORS_ORIGINS: http://localhost,http://localhost:5173
-      MARKET_PROVIDER: mock
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:5173}
+      MARKET_PROVIDER: ${MARKET_PROVIDER:-mock}
+      PUSH_CHANNEL: ${PUSH_CHANNEL:-none}
+      WECHAT_WEBHOOK_URL: ${WECHAT_WEBHOOK_URL:-}
+      QQ_WEBHOOK_URL: ${QQ_WEBHOOK_URL:-}
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 15s
+      timeout: 8s
+      retries: 5
 
   worker:
     build:
       context: ./backend
     command: ["python", "-m", "app.jobs.worker"]
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://cs_quant:cs_quant_password@postgres:5432/cs_quant
-      MARKET_PROVIDER: mock
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
+      MARKET_PROVIDER: ${MARKET_PROVIDER:-mock}
+      PUSH_CHANNEL: ${PUSH_CHANNEL:-none}
+      WECHAT_WEBHOOK_URL: ${WECHAT_WEBHOOK_URL:-}
+      QQ_WEBHOOK_URL: ${QQ_WEBHOOK_URL:-}
     depends_on:
-      - backend
-      - postgres
-      - redis
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./frontend
+    restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 8s
+      retries: 5
 
 volumes:
   postgres_data:

@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.7 — 采集日志与数据源状态增强
+V0.1.8 — Docker Compose 生产可用性增强
 
 ## 功能范围
 
@@ -21,6 +21,16 @@ V0.1.7 — 采集日志与数据源状态增强
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
 - 数据源状态：当前使用 Mock / Steam 适配层占位
 - Docker Compose：frontend、backend、worker、postgres、redis
+
+## 环境变量
+
+复制 `.env.example` 为 `.env`，至少修改：
+
+```bash
+POSTGRES_PASSWORD=change_me
+MARKET_PROVIDER=mock
+PUSH_CHANNEL=none
+```
 
 ## 本地启动
 
@@ -55,6 +65,15 @@ docker compose up -d --build
 ```
 
 访问：`http://localhost`
+
+### 部署验证
+
+```powershell
+.\scripts\verify_deploy.ps1 -BaseUrl http://localhost
+.\scripts\verify_deploy.ps1 -BaseUrl http://localhost -Collect
+```
+
+该脚本需要服务器已安装 Docker Compose，并且项目服务已经启动。
 
 ## API
 
@@ -93,6 +112,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.8 — 增强 Docker Compose 健康检查、重启策略、环境变量模板和部署验证脚本。
 - V0.1.7 — 增加采集运行日志、采集状态 API 和数据源状态页采集记录展示。
 - V0.1.6 — 增加告警回测结果表、回测服务、回测 API 和前端回测页。
 - V0.1.5 — 增加监控池分组、饰品池归属、池状态接口和 worker 到期池采集。
