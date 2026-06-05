@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.11 — 数据源可信度状态增强
+V0.1.12 — Steam 订单簿适配增强
 
 ## 功能范围
 
@@ -19,7 +19,7 @@ V0.1.11 — 数据源可信度状态增强
 - 监控池：重点池、观察池、事件池分组，worker 按池间隔采集
 - 告警回测：记录告警后多窗口价格变化、胜率和平均变化
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
-- 数据源状态：展示 Mock / Steam 适配层、真实字段占比、补位字段、fallback 次数和最近错误
+- 数据源状态：展示 Mock / Steam 适配层、订单簿开关、真实字段占比、补位字段、fallback 次数和最近错误
 - 数据库迁移：Alembic 基线迁移，后端容器启动前自动执行迁移
 - Docker Compose：frontend、backend、worker、postgres、redis
 
@@ -30,7 +30,16 @@ V0.1.11 — 数据源可信度状态增强
 ```bash
 POSTGRES_PASSWORD=change_me
 MARKET_PROVIDER=mock
+STEAM_ORDERBOOK_ENABLED=false
 PUSH_CHANNEL=none
+```
+
+Steam 订单簿深度需要额外配置 `item_nameid` 映射，例如：
+
+```bash
+MARKET_PROVIDER=steam
+STEAM_ORDERBOOK_ENABLED=true
+STEAM_ORDERBOOK_ITEM_NAMEIDS={"AK-47 | Test":"12345"}
 ```
 
 ## 本地启动
@@ -122,6 +131,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.12 — 增加可选 Steam 订单簿适配，配置 item_nameid 后可用真实在售/求购深度替代补位字段。
 - V0.1.11 — 增加采集数据源质量指标，展示真实字段、补位字段、fallback 次数和最近错误。
 - V0.1.10 — 增加单品详情时间段热力图和按类型聚合的历史告警简报。
 - V0.1.9 — 增加 Alembic 迁移基线、迁移启动器和迁移自测，后端容器启动前自动升级数据库。

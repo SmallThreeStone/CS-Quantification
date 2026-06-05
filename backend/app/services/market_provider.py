@@ -1,3 +1,4 @@
+import json
 import random
 import re
 from dataclasses import dataclass
@@ -81,15 +82,10 @@ class MockMarketProvider:
 class SteamMarketProvider:
     def __init__(self) -> None:
         self.fallback = MockMarketProvider()
+        self.item_nameids = self._load_item_nameids()
 
     def fetch_quote(self, market_hash_name: str) -> Quote:
-        response = httpx.get(
-            "https://steamcommunity.com/market/priceoverview/",
-            params={"appid": 730, "currency": 23, "market_hash_name": market_hash_name},
-            timeout=8,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        payload = self._priceoverview(market_hash_name)
         if not payload.get("success"):
             quote = self.fallback.fetch_quote(market_hash_name)
             quote.raw_payload["provider"] = "steam_priceoverview"
@@ -103,6 +99,15 @@ class SteamMarketProvider:
         volume_24h = int(volume_text) if volume_text.isdigit() else fallback.volume_24h
         real_fields = []
         fallback_fields = ["sell_count", "highest_buy_price", "buy_count"]
+        orderbook_payload = None
+        orderbook = None
+        orderbook_error = ""
+        if settings.steam_orderbook_enabled:
+            try:
+                orderbook_payload = self._orderbook(market_hash_name)
+                orderbook = self._parse_orderbook(orderbook_payload)
+            except Exception as exc:
+                orderbook_error = str(exc)
         if payload.get("lowest_price"):
             real_fields.append("lowest_price")
         else:
@@ -115,18 +120,25 @@ class SteamMarketProvider:
             real_fields.append("avg_price_24h")
         else:
             fallback_fields.append("avg_price_24h")
+        if orderbook is not None:
+            for field in ["sell_count", "highest_buy_price", "buy_count"]:
+                if field in fallback_fields:
+                    fallback_fields.remove(field)
+                real_fields.append(field)
         return Quote(
             market_hash_name=market_hash_name,
             lowest_price=lowest_price,
-            sell_count=fallback.sell_count,
-            highest_buy_price=fallback.highest_buy_price,
-            buy_count=fallback.buy_count,
+            sell_count=orderbook["sell_count"] if orderbook else fallback.sell_count,
+            highest_buy_price=orderbook["highest_buy_price"] if orderbook else fallback.highest_buy_price,
+            buy_count=orderbook["buy_count"] if orderbook else fallback.buy_count,
             volume_24h=volume_24h,
             avg_price_24h=self._money_to_float(payload.get("median_price")) or fallback.avg_price_24h,
             captured_at=datetime.utcnow(),
             raw_payload={
                 "provider": "steam_priceoverview",
                 "payload": payload,
+                "orderbook_payload": orderbook_payload,
+                "orderbook_error": orderbook_error,
                 "source_quality": {
                     "real_fields": real_fields,
                     "fallback_fields": fallback_fields,
@@ -134,6 +146,59 @@ class SteamMarketProvider:
                 },
             },
         )
+
+    def _priceoverview(self, market_hash_name: str) -> dict:
+        response = httpx.get(
+            "https://steamcommunity.com/market/priceoverview/",
+            params={"appid": 730, "currency": 23, "market_hash_name": market_hash_name},
+            timeout=8,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def _orderbook(self, market_hash_name: str) -> dict:
+        item_nameid = self.item_nameids.get(market_hash_name)
+        if not item_nameid:
+            raise ValueError("missing steam item_nameid mapping")
+        response = httpx.get(
+            "https://steamcommunity.com/market/itemordershistogram",
+            params={
+                "country": "CN",
+                "language": "schinese",
+                "currency": 23,
+                "item_nameid": item_nameid,
+            },
+            timeout=8,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def _parse_orderbook(self, payload: dict) -> dict | None:
+        sell_orders = payload.get("sell_order_graph") or []
+        buy_orders = payload.get("buy_order_graph") or []
+        if not sell_orders and not buy_orders:
+            return None
+        sell_count = self._total_order_count(sell_orders)
+        buy_count = self._total_order_count(buy_orders)
+        highest_buy_price = float(buy_orders[0][0]) if buy_orders else 0
+        return {"sell_count": sell_count, "buy_count": buy_count, "highest_buy_price": round(highest_buy_price, 2)}
+
+    def _total_order_count(self, rows: list[list]) -> int:
+        counts = []
+        for row in rows:
+            if len(row) >= 2:
+                try:
+                    counts.append(int(float(row[1])))
+                except (TypeError, ValueError):
+                    pass
+        return max(counts, default=0)
+
+    def _load_item_nameids(self) -> dict[str, str]:
+        try:
+            payload = json.loads(settings.steam_orderbook_item_nameids)
+        except json.JSONDecodeError:
+            return {}
+        return {str(key): str(value) for key, value in payload.items()}
 
     def _money_to_float(self, value: str | None) -> float | None:
         if not value:

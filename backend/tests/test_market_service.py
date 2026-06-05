@@ -85,7 +85,7 @@ def test_collect_run_log_records_source_quality(db_session):
     assert service.last_run_log is not None
     assert service.last_run_log.real_field_count == 2
     assert service.last_run_log.fallback_field_count == 4
-    assert service.last_run_log.fallback_count == 0
+    assert service.last_run_log.fallback_count == 1
 
 
 def test_steam_provider_marks_partial_real_fields(monkeypatch):
@@ -104,6 +104,75 @@ def test_steam_provider_marks_partial_real_fields(monkeypatch):
     assert quality["is_fallback"] is False
     assert {"lowest_price", "volume_24h", "avg_price_24h"} <= set(quality["real_fields"])
     assert {"sell_count", "highest_buy_price", "buy_count"} <= set(quality["fallback_fields"])
+
+
+def test_steam_provider_uses_orderbook_when_item_nameid_is_configured(monkeypatch):
+    from app.config import settings
+
+    previous_enabled = settings.steam_orderbook_enabled
+    previous_mapping = settings.steam_orderbook_item_nameids
+    settings.steam_orderbook_enabled = True
+    settings.steam_orderbook_item_nameids = '{"AK-47 | Test": "12345"}'
+
+    class Response:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, *args, **kwargs):
+        if "itemordershistogram" in url:
+            return Response(
+                {
+                    "sell_order_graph": [[101.0, 3, "3"], [102.0, 8, "8"]],
+                    "buy_order_graph": [[99.0, 4, "4"], [98.0, 9, "9"]],
+                }
+            )
+        return Response({"success": True, "lowest_price": "¥100.50", "volume": "12", "median_price": "¥99.00"})
+
+    monkeypatch.setattr("app.services.market_provider.httpx.get", fake_get)
+    try:
+        quote = SteamMarketProvider().fetch_quote("AK-47 | Test")
+    finally:
+        settings.steam_orderbook_enabled = previous_enabled
+        settings.steam_orderbook_item_nameids = previous_mapping
+
+    quality = quote.raw_payload["source_quality"]
+    assert quote.sell_count == 8
+    assert quote.buy_count == 9
+    assert quote.highest_buy_price == 99
+    assert {"sell_count", "highest_buy_price", "buy_count"} <= set(quality["real_fields"])
+    assert "sell_count" not in quality["fallback_fields"]
+
+
+def test_steam_provider_records_orderbook_fallback_reason(monkeypatch):
+    from app.config import settings
+
+    previous_enabled = settings.steam_orderbook_enabled
+    previous_mapping = settings.steam_orderbook_item_nameids
+    settings.steam_orderbook_enabled = True
+    settings.steam_orderbook_item_nameids = "{}"
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"success": True, "lowest_price": "¥100.50", "volume": "12", "median_price": "¥99.00"}
+
+    monkeypatch.setattr("app.services.market_provider.httpx.get", lambda *args, **kwargs: Response())
+    try:
+        quote = SteamMarketProvider().fetch_quote("AK-47 | Test")
+    finally:
+        settings.steam_orderbook_enabled = previous_enabled
+        settings.steam_orderbook_item_nameids = previous_mapping
+
+    assert "missing steam item_nameid mapping" in quote.raw_payload["orderbook_error"]
+    assert {"sell_count", "highest_buy_price", "buy_count"} <= set(quote.raw_payload["source_quality"]["fallback_fields"])
 
 
 class FailingProvider:

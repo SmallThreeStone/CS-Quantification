@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/cs_quant.db"
     cors_origins: str = "http://localhost:5173"
     market_provider: str = "mock"
+    steam_orderbook_enabled: bool = False
+    steam_orderbook_item_nameids: str = "{}"
     push_channel: str = "none"
     wechat_webhook_url: str = ""
     qq_webhook_url: str = ""

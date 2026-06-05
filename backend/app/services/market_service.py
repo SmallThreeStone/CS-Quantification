@@ -55,7 +55,7 @@ class MarketService:
                 quality = quote.raw_payload.get("source_quality", {})
                 real_fields += len(quality.get("real_fields", []))
                 fallback_fields += len(quality.get("fallback_fields", []))
-                fallback_count += 1 if quality.get("is_fallback") else 0
+                fallback_count += 1 if quality.get("is_fallback") or quality.get("fallback_fields") else 0
                 snapshot = MarketSnapshot(
                     item_id=item.id,
                     platform_id=platform.id,

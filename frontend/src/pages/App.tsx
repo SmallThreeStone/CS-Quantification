@@ -750,7 +750,7 @@ function SourceView({
       <h2>数据源状态</h2>
       <div className="settings-grid">
         <Metric label="API 状态" value="在线" tone="up" />
-        <Metric label="行情来源" value="Mock / Steam 适配层" />
+        <Metric label="行情来源" value="Mock / Steam priceoverview / 可选订单簿" />
         <Metric label="监控饰品" value={`${items.length} 个`} />
         <Metric label="监控池" value={`${pools.length} 个`} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
