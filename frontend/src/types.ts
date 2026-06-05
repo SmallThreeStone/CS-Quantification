@@ -82,6 +82,10 @@ export type BacktestSummary = {
   win_count: number;
   win_rate: number;
   avg_change_rate: number;
+  max_gain_rate: number;
+  max_drawdown_rate: number;
+  profit_loss_ratio: number;
+  confidence_level: string;
 };
 
 export type HeatmapBucket = {

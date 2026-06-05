@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from app.models import Alert, Item, MarketSnapshot, Platform
 from app.services.backtest_service import BacktestService
 
@@ -26,11 +28,33 @@ def test_backtest_summary_counts_directional_win(db_session):
     assert summary[0]["sample_count"] == 1
     assert summary[0]["win_count"] == 1
     assert summary[0]["win_rate"] == 1
+    assert summary[0]["max_gain_rate"] == pytest.approx(-0.1)
+    assert summary[0]["max_drawdown_rate"] == pytest.approx(-0.1)
+    assert summary[0]["profit_loss_ratio"] == 0
+    assert summary[0]["confidence_level"] == "低"
 
 
-def create_alert_with_snapshots(db_session, direction: str, exit_price: float) -> Alert:
-    item = Item(market_hash_name=f"item-{direction}", display_name="测试饰品")
-    platform = Platform(code=f"steam-{direction}", name="Steam")
+def test_backtest_summary_tracks_extremes_and_profit_loss_ratio(db_session):
+    winning_alert = create_alert_with_snapshots(db_session, direction="偏买入机会", exit_price=120, suffix="win")
+    losing_alert = create_alert_with_snapshots(db_session, direction="偏买入机会", exit_price=90, suffix="loss")
+    BacktestService(db_session).evaluate_due_alerts(now=winning_alert.created_at + timedelta(minutes=11))
+    BacktestService(db_session).evaluate_due_alerts(now=losing_alert.created_at + timedelta(minutes=11))
+
+    summary = BacktestService(db_session).summary()
+
+    assert len(summary) == 1
+    assert summary[0]["sample_count"] == 2
+    assert summary[0]["win_count"] == 1
+    assert summary[0]["avg_change_rate"] == pytest.approx(0.05)
+    assert summary[0]["max_gain_rate"] == pytest.approx(0.2)
+    assert summary[0]["max_drawdown_rate"] == pytest.approx(-0.1)
+    assert summary[0]["profit_loss_ratio"] == pytest.approx(2)
+
+
+def create_alert_with_snapshots(db_session, direction: str, exit_price: float, suffix: str = "") -> Alert:
+    key = f"{direction}-{suffix}" if suffix else direction
+    item = Item(market_hash_name=f"item-{key}", display_name="测试饰品")
+    platform = Platform(code=f"steam-{key}", name="Steam")
     db_session.add_all([item, platform])
     db_session.flush()
     created_at = datetime.utcnow() - timedelta(minutes=20)

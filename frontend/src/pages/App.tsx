@@ -224,6 +224,10 @@ function BacktestView({
                 <th>命中</th>
                 <th>胜率</th>
                 <th>平均变化</th>
+                <th>最大上涨</th>
+                <th>最大回撤</th>
+                <th>盈亏比</th>
+                <th>置信</th>
               </tr>
             </thead>
             <tbody>
@@ -235,6 +239,12 @@ function BacktestView({
                   <td>{row.win_count}</td>
                   <td>{formatPercent(row.win_rate)}</td>
                   <td className={row.avg_change_rate >= 0 ? "up" : "down"}>{formatPercent(row.avg_change_rate)}</td>
+                  <td className="up">{formatPercent(row.max_gain_rate)}</td>
+                  <td className="down">{formatPercent(row.max_drawdown_rate)}</td>
+                  <td>{row.profit_loss_ratio ? row.profit_loss_ratio.toFixed(2) : "-"}</td>
+                  <td>
+                    <span className={`quality-tag ${confidenceClass(row.confidence_level)}`}>{row.confidence_level}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -255,6 +265,7 @@ function BacktestView({
                 <th>入场</th>
                 <th>评估</th>
                 <th>变化</th>
+                <th>评估时间</th>
               </tr>
             </thead>
             <tbody>
@@ -267,6 +278,7 @@ function BacktestView({
                   <td>¥{row.entry_price.toFixed(2)}</td>
                   <td>¥{row.exit_price.toFixed(2)}</td>
                   <td className={row.change_rate >= 0 ? "up" : "down"}>{formatPercent(row.change_rate)}</td>
+                  <td>{formatDate(row.evaluated_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1359,6 +1371,16 @@ function formatTime(value: string) {
   return `${month}-${day} ${hour}:${minute}`;
 }
 
+function formatDate(value: string) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hour}:${minute}`;
+}
+
 function batchMessage(
   label: string,
   result: {
@@ -1393,6 +1415,16 @@ function qualityLevelText(level: string) {
     return "部分补位";
   }
   return "补位";
+}
+
+function confidenceClass(level: string) {
+  if (level === "高") {
+    return "trusted";
+  }
+  if (level === "中") {
+    return "partial";
+  }
+  return "fallback";
 }
 
 function signalClass(action: string) {

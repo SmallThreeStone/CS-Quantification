@@ -53,6 +53,8 @@ class BacktestService:
         for (alert_type, horizon), results in sorted(buckets.items(), key=lambda item: (item[0][0], item[0][1])):
             wins = sum(1 for result in results if self._is_win(result))
             avg_change = sum(result.change_rate for result in results) / len(results)
+            max_gain = max(result.change_rate for result in results)
+            max_drawdown = min(result.change_rate for result in results)
             summary.append(
                 {
                     "alert_type": alert_type,
@@ -61,6 +63,10 @@ class BacktestService:
                     "win_count": wins,
                     "win_rate": wins / len(results),
                     "avg_change_rate": avg_change,
+                    "max_gain_rate": max_gain,
+                    "max_drawdown_rate": max_drawdown,
+                    "profit_loss_ratio": self._profit_loss_ratio(results),
+                    "confidence_level": self._confidence_level(len(results)),
                 }
             )
         return summary
@@ -93,3 +99,17 @@ class BacktestService:
         if direction == "偏卖压风险":
             return result.price_change < 0
         return False
+
+    def _profit_loss_ratio(self, results: list[BacktestResult]) -> float:
+        gains = [result.change_rate for result in results if result.change_rate > 0]
+        losses = [abs(result.change_rate) for result in results if result.change_rate < 0]
+        if not gains or not losses:
+            return 0
+        return (sum(gains) / len(gains)) / (sum(losses) / len(losses))
+
+    def _confidence_level(self, sample_count: int) -> str:
+        if sample_count >= 30:
+            return "高"
+        if sample_count >= 10:
+            return "中"
+        return "低"

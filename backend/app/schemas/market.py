@@ -94,6 +94,10 @@ class BacktestSummaryOut(BaseModel):
     win_count: int
     win_rate: float
     avg_change_rate: float
+    max_gain_rate: float
+    max_drawdown_rate: float
+    profit_loss_ratio: float
+    confidence_level: str
 
 
 class HeatmapBucketOut(BaseModel):
