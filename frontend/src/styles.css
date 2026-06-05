@@ -151,6 +151,28 @@ h3 {
   color: #c7d2e2;
 }
 
+.batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.batch-actions button {
+  min-width: 132px;
+  height: 34px;
+  border: 1px solid #2a3749;
+  border-radius: 6px;
+  background: #151b25;
+  color: #d7dde7;
+  cursor: pointer;
+}
+
+.batch-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 table {
   width: 100%;
   min-width: 980px;

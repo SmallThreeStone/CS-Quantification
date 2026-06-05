@@ -15,6 +15,22 @@ import type {
 
 const API_BASE = "";
 
+type SteamNameIdBatchResult = {
+  total: number;
+  success_count: number;
+  failure_count: number;
+  results: Array<{
+    item_id: number;
+    market_hash_name: string;
+    steam_item_nameid: string;
+    ok: boolean;
+    sell_count: number;
+    buy_count: number;
+    highest_buy_price: number;
+    error: string;
+  }>;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, init);
   if (!response.ok) {
@@ -65,6 +81,9 @@ export const api = {
       highest_buy_price: number;
       error: string;
     }>(`/api/items/${id}/steam-nameid/validate`, { method: "POST" }),
+  discoverMissingSteamNameIds: () =>
+    request<SteamNameIdBatchResult>("/api/steam-nameids/discover-missing", { method: "POST" }),
+  validateAllSteamNameIds: () => request<SteamNameIdBatchResult>("/api/steam-nameids/validate-all", { method: "POST" }),
   strategy: () => request<StrategyConfig>("/api/strategy"),
   updateStrategy: (payload: StrategyConfigUpdate) =>
     request<StrategyConfig>("/api/strategy", {

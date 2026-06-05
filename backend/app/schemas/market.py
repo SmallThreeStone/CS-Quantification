@@ -181,6 +181,13 @@ class SteamOrderbookValidationOut(BaseModel):
     error: str = ""
 
 
+class SteamNameIdBatchOut(BaseModel):
+    total: int
+    success_count: int
+    failure_count: int
+    results: list[SteamOrderbookValidationOut]
+
+
 class MonitorPoolOut(BaseModel):
     id: int
     name: str

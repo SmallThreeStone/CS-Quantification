@@ -223,3 +223,45 @@ def test_validate_item_steam_nameid_returns_error_payload(db_session, monkeypatc
     assert response.status_code == 200
     assert response.json()["ok"] is False
     assert response.json()["error"] == "missing steam item_nameid"
+
+
+def test_discover_missing_steam_nameids_updates_only_active_missing_items(db_session, monkeypatch):
+    missing = Item(market_hash_name="missing", display_name="Missing", is_active=True)
+    existing = Item(market_hash_name="existing", display_name="Existing", steam_item_nameid="old", is_active=True)
+    inactive = Item(market_hash_name="inactive", display_name="Inactive", is_active=False)
+    db_session.add_all([missing, existing, inactive])
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    monkeypatch.setattr("app.routers.market.SteamNameIdService.discover", lambda self, market_hash_name: f"id-{market_hash_name}")
+
+    response = client.post("/api/steam-nameids/discover-missing")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert response.json()["success_count"] == 1
+    assert db_session.get(Item, missing.id).steam_item_nameid == "id-missing"
+    assert db_session.get(Item, existing.id).steam_item_nameid == "old"
+    assert db_session.get(Item, inactive.id).steam_item_nameid == ""
+
+
+def test_validate_all_steam_nameids_returns_batch_result(db_session, monkeypatch):
+    ready = Item(market_hash_name="ready", display_name="Ready", steam_item_nameid="123", is_active=True)
+    missing = Item(market_hash_name="missing", display_name="Missing", steam_item_nameid="", is_active=True)
+    db_session.add_all([ready, missing])
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    monkeypatch.setattr(
+        "app.routers.market.SteamNameIdService.validate_orderbook",
+        lambda self, steam_item_nameid: {"sell_count": 8, "buy_count": 9, "highest_buy_price": 99.0},
+    )
+
+    response = client.post("/api/steam-nameids/validate-all")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert response.json()["success_count"] == 1
+    assert response.json()["results"][0]["market_hash_name"] == "ready"

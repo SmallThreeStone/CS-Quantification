@@ -17,6 +17,7 @@ from app.schemas.market import (
     ItemOut,
     ItemUpdate,
     SteamOrderbookValidationOut,
+    SteamNameIdBatchOut,
     SteamNameIdOut,
     MonitorPoolOut,
     MonitorItemOut,
@@ -152,11 +153,9 @@ def discover_item_steam_nameid(item_id: int, db: Session = Depends(get_db)) -> S
     if item is None:
         raise HTTPException(status_code=404, detail="item not found")
     try:
-        item.steam_item_nameid = SteamNameIdService().discover(item.market_hash_name)
+        _discover_nameid(item, db, SteamNameIdService())
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    db.commit()
-    db.refresh(item)
     return SteamNameIdOut(
         item_id=item.id,
         market_hash_name=item.market_hash_name,
@@ -164,29 +163,94 @@ def discover_item_steam_nameid(item_id: int, db: Session = Depends(get_db)) -> S
     )
 
 
+@router.post("/steam-nameids/discover-missing", response_model=SteamNameIdBatchOut)
+def discover_missing_steam_nameids(db: Session = Depends(get_db)) -> SteamNameIdBatchOut:
+    service = SteamNameIdService()
+    items = (
+        db.query(Item)
+        .filter(Item.is_active.is_(True), (Item.steam_item_nameid == "") | (Item.steam_item_nameid.is_(None)))
+        .order_by(Item.display_name.asc())
+        .all()
+    )
+    results: list[SteamOrderbookValidationOut] = []
+    for item in items:
+        try:
+            _discover_nameid(item, db, service)
+            results.append(_validation_result(item, ok=True))
+        except Exception as exc:
+            db.rollback()
+            results.append(_validation_result(item, ok=False, error=str(exc)))
+    return _batch_result(results)
+
+
 @router.post("/items/{item_id}/steam-nameid/validate", response_model=SteamOrderbookValidationOut)
 def validate_item_steam_nameid(item_id: int, db: Session = Depends(get_db)) -> SteamOrderbookValidationOut:
     item = db.get(Item, item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="item not found")
+    return _validate_nameid(item, SteamNameIdService())
+
+
+@router.post("/steam-nameids/validate-all", response_model=SteamNameIdBatchOut)
+def validate_all_steam_nameids(db: Session = Depends(get_db)) -> SteamNameIdBatchOut:
+    service = SteamNameIdService()
+    items = (
+        db.query(Item)
+        .filter(Item.is_active.is_(True), Item.steam_item_nameid != "")
+        .order_by(Item.display_name.asc())
+        .all()
+    )
+    results = [_validate_nameid(item, service) for item in items]
+    return _batch_result(results)
+
+
+def _discover_nameid(item: Item, db: Session, service: SteamNameIdService) -> None:
+    item.steam_item_nameid = service.discover(item.market_hash_name)
+    db.commit()
+    db.refresh(item)
+
+
+def _validate_nameid(item: Item, service: SteamNameIdService) -> SteamOrderbookValidationOut:
     try:
-        orderbook = SteamNameIdService().validate_orderbook(item.steam_item_nameid)
+        orderbook = service.validate_orderbook(item.steam_item_nameid)
     except Exception as exc:
-        return SteamOrderbookValidationOut(
-            item_id=item.id,
-            market_hash_name=item.market_hash_name,
-            steam_item_nameid=item.steam_item_nameid,
-            ok=False,
-            error=str(exc),
-        )
-    return SteamOrderbookValidationOut(
-        item_id=item.id,
-        market_hash_name=item.market_hash_name,
-        steam_item_nameid=item.steam_item_nameid,
+        return _validation_result(item, ok=False, error=str(exc))
+    return _validation_result(
+        item,
         ok=True,
         sell_count=orderbook["sell_count"],
         buy_count=orderbook["buy_count"],
         highest_buy_price=orderbook["highest_buy_price"],
+    )
+
+
+def _validation_result(
+    item: Item,
+    ok: bool,
+    sell_count: int = 0,
+    buy_count: int = 0,
+    highest_buy_price: float = 0,
+    error: str = "",
+) -> SteamOrderbookValidationOut:
+    return SteamOrderbookValidationOut(
+        item_id=item.id,
+        market_hash_name=item.market_hash_name,
+        steam_item_nameid=item.steam_item_nameid,
+        ok=ok,
+        sell_count=sell_count,
+        buy_count=buy_count,
+        highest_buy_price=highest_buy_price,
+        error=error,
+    )
+
+
+def _batch_result(results: list[SteamOrderbookValidationOut]) -> SteamNameIdBatchOut:
+    success_count = sum(1 for result in results if result.ok)
+    return SteamNameIdBatchOut(
+        total=len(results),
+        success_count=success_count,
+        failure_count=len(results) - success_count,
+        results=results,
     )
 
 

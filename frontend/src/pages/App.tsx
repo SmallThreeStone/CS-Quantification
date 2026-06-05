@@ -290,6 +290,7 @@ function ItemManager({
   const [saving, setSaving] = useState(false);
   const [discoveringId, setDiscoveringId] = useState<number | null>(null);
   const [validatingId, setValidatingId] = useState<number | null>(null);
+  const [batching, setBatching] = useState<"discover" | "validate" | null>(null);
   const [validationMessage, setValidationMessage] = useState("");
 
   function edit(item: ManagedItem) {
@@ -353,6 +354,29 @@ function ItemManager({
     }
   }
 
+  async function batchDiscover() {
+    setBatching("discover");
+    setValidationMessage("");
+    try {
+      const result = await api.discoverMissingSteamNameIds();
+      setValidationMessage(batchMessage("批量发现", result));
+      await onChanged();
+    } finally {
+      setBatching(null);
+    }
+  }
+
+  async function batchValidate() {
+    setBatching("validate");
+    setValidationMessage("");
+    try {
+      const result = await api.validateAllSteamNameIds();
+      setValidationMessage(batchMessage("批量验证", result));
+    } finally {
+      setBatching(null);
+    }
+  }
+
   return (
     <section className="panel item-manager">
       <div className="item-form">
@@ -410,6 +434,14 @@ function ItemManager({
       </div>
 
       <div className="table-wrap">
+        <div className="batch-actions">
+          <button onClick={batchDiscover} disabled={batching !== null}>
+            {batching === "discover" ? "批量发现中" : "批量发现缺失ID"}
+          </button>
+          <button onClick={batchValidate} disabled={batching !== null}>
+            {batching === "validate" ? "批量验证中" : "批量验深度"}
+          </button>
+        </div>
         {validationMessage && <div className="inline-status">{validationMessage}</div>}
         <table>
           <thead>
@@ -896,4 +928,23 @@ function formatTime(value: string) {
   const hour = String(date.getHours()).padStart(2, "0");
   const minute = String(date.getMinutes()).padStart(2, "0");
   return `${month}-${day} ${hour}:${minute}`;
+}
+
+function batchMessage(
+  label: string,
+  result: {
+    total: number;
+    success_count: number;
+    failure_count: number;
+    results: Array<{ market_hash_name: string; ok: boolean; error: string }>;
+  }
+) {
+  const failures = result.results
+    .filter((row) => !row.ok)
+    .slice(0, 3)
+    .map((row) => `${row.market_hash_name}: ${row.error}`)
+    .join("；");
+  return `${label}完成：共 ${result.total}，成功 ${result.success_count}，失败 ${result.failure_count}${
+    failures ? `。${failures}` : ""
+  }`;
 }
