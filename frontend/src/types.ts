@@ -29,6 +29,14 @@ export type DecisionSignal = {
   reason: string;
 };
 
+export type CategoryStrategy = {
+  category: string;
+  profile: string;
+  buy_adjustment: number;
+  sell_adjustment: number;
+  reason: string;
+};
+
 export type Alert = {
   id: number;
   item_id: number;
@@ -183,6 +191,7 @@ export type MonitorItem = {
   latest_snapshot: Snapshot | null;
   latest_alert: Alert | null;
   source_quality: SourceQuality | null;
+  category_strategy: CategoryStrategy;
   decision_signal: DecisionSignal;
 };
 

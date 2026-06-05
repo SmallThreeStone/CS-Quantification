@@ -12,6 +12,7 @@ from app.schemas.market import (
     BacktestSummaryOut,
     CollectRunLogOut,
     DecisionSignalOut,
+    CategoryStrategyOut,
     AlertSummaryOut,
     HeatmapBucketOut,
     HealthOut,
@@ -111,6 +112,10 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
     adjusted_buy_score, adjusted_sell_score, quality_penalty = _quality_adjusted_scores(
         buy_score, sell_score, source_quality, config.quality_penalty_max
     )
+    category_strategy = _category_strategy(item, latest_snapshot)
+    adjusted_buy_score, adjusted_sell_score = _category_adjusted_scores(
+        adjusted_buy_score, adjusted_sell_score, category_strategy
+    )
     status = status_from_alert(latest_alert)
     decision_signal = _decision_signal(latest_snapshot, status, adjusted_buy_score, adjusted_sell_score, source_quality)
     return ItemDetailOut(
@@ -131,6 +136,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         heatmap=_heatmap(list(reversed(snapshots))),
         alert_summary=_alert_summary(alerts),
         source_quality=source_quality,
+        category_strategy=category_strategy,
         decision_signal=decision_signal,
     )
 
@@ -432,6 +438,10 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
     adjusted_buy_score, adjusted_sell_score, quality_penalty = _quality_adjusted_scores(
         buy_score, sell_score, source_quality, config.quality_penalty_max
     )
+    category_strategy = _category_strategy(item, latest_snapshot)
+    adjusted_buy_score, adjusted_sell_score = _category_adjusted_scores(
+        adjusted_buy_score, adjusted_sell_score, category_strategy
+    )
     status = status_from_alert(latest_alert)
     decision_signal = _decision_signal(latest_snapshot, status, adjusted_buy_score, adjusted_sell_score, source_quality)
     return MonitorItemOut(
@@ -451,6 +461,7 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
         latest_snapshot=_snapshot_out(latest_snapshot, config) if latest_snapshot else None,
         latest_alert=_alert_out(latest_alert) if latest_alert else None,
         source_quality=source_quality,
+        category_strategy=category_strategy,
         decision_signal=decision_signal,
     )
 
@@ -628,6 +639,58 @@ def _quality_adjusted_scores(
         return max(0, buy_score - penalty), max(0, sell_score - penalty), penalty
     penalty = round((1 - source_quality.real_ratio) * max_penalty)
     return max(0, buy_score - penalty), max(0, sell_score - penalty), penalty
+
+
+def _category_strategy(item: Item, snapshot: MarketSnapshot | None) -> CategoryStrategyOut:
+    category = (item.category or "uncategorized").lower()
+    if category in {"gloves", "knife"}:
+        profile = "高客单低流动"
+        buy_adjustment = -6
+        sell_adjustment = 4
+        reason = "高客单饰品优先控制流动性与卖出安全边际"
+    elif category in {"case", "sticker", "capsule"}:
+        profile = "高流动事件"
+        buy_adjustment = 5
+        sell_adjustment = -2
+        reason = "事件类饰品更看重成交与短期热度"
+    elif category in {"rifle", "pistol", "smg", "sniper", "shotgun"}:
+        profile = "常规武器"
+        buy_adjustment = 2
+        sell_adjustment = 0
+        reason = "常规武器按流动性与价差均衡处理"
+    else:
+        profile = "默认品类"
+        buy_adjustment = 0
+        sell_adjustment = 0
+        reason = "暂无专用品类规则"
+    if snapshot is not None:
+        spread_rate = (snapshot.lowest_price - snapshot.highest_buy_price) / max(snapshot.lowest_price, 1)
+        if spread_rate > 0.12:
+            buy_adjustment -= 4
+            sell_adjustment += 2
+            reason = f"{reason}，当前买卖价差偏大"
+        if snapshot.volume_24h <= 1:
+            buy_adjustment -= 3
+            sell_adjustment += 2
+            reason = f"{reason}，24h 成交偏低"
+    return CategoryStrategyOut(
+        category=category,
+        profile=profile,
+        buy_adjustment=buy_adjustment,
+        sell_adjustment=sell_adjustment,
+        reason=reason,
+    )
+
+
+def _category_adjusted_scores(
+    buy_score: int,
+    sell_score: int,
+    category_strategy: CategoryStrategyOut,
+) -> tuple[int, int]:
+    return (
+        max(0, min(100, buy_score + category_strategy.buy_adjustment)),
+        max(0, min(100, sell_score + category_strategy.sell_adjustment)),
+    )
 
 
 def _decision_signal(

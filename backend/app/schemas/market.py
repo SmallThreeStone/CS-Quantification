@@ -39,6 +39,14 @@ class DecisionSignalOut(BaseModel):
     reason: str
 
 
+class CategoryStrategyOut(BaseModel):
+    category: str
+    profile: str
+    buy_adjustment: int
+    sell_adjustment: int
+    reason: str
+
+
 class AlertOut(BaseModel):
     id: int
     item_id: int
@@ -265,6 +273,7 @@ class MonitorItemOut(BaseModel):
     latest_snapshot: SnapshotOut | None
     latest_alert: AlertOut | None
     source_quality: SourceQualityOut | None
+    category_strategy: CategoryStrategyOut
     decision_signal: DecisionSignalOut
 
 
@@ -286,6 +295,7 @@ class ItemDetailOut(BaseModel):
     heatmap: list[HeatmapBucketOut]
     alert_summary: list[AlertSummaryOut]
     source_quality: SourceQualityOut | None
+    category_strategy: CategoryStrategyOut
     decision_signal: DecisionSignalOut
 
 

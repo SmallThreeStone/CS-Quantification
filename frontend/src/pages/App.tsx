@@ -718,6 +718,7 @@ function MonitorView({
               <th>饰品</th>
               <SortableHead label="状态" active={sortKey === "activity"} direction={sortDirection} onClick={() => changeSort("activity")} />
               <th>信号</th>
+              <th>品类策略</th>
               <th>可信度</th>
               <SortableHead label="底价" active={sortKey === "price"} direction={sortDirection} onClick={() => changeSort("price")} />
               <SortableHead label="在售" active={sortKey === "sell"} direction={sortDirection} onClick={() => changeSort("sell")} />
@@ -743,6 +744,10 @@ function MonitorView({
                     {item.decision_signal.action}
                   </span>
                   <span>{item.decision_signal.confidence}</span>
+                </td>
+                <td>
+                  <span className="tag">{item.category_strategy.profile}</span>
+                  <span>{strategyAdjustmentText(item.category_strategy.buy_adjustment, item.category_strategy.sell_adjustment)}</span>
                 </td>
                 <td><span className={`quality-tag ${item.source_quality?.level ?? "unknown"}`}>{qualityText(item)}</span></td>
                 <td>¥{item.latest_snapshot?.lowest_price.toFixed(2) ?? "-"}</td>
@@ -832,6 +837,7 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
         </div>
         <Metric label="参考信号" value={`${detail.decision_signal.action} ${detail.decision_signal.confidence}`} tone={signalTone(detail.decision_signal.action)} />
         <Metric label="信号依据" value={detail.decision_signal.reason} />
+        <Metric label="品类策略" value={`${detail.category_strategy.profile} ${strategyAdjustmentText(detail.category_strategy.buy_adjustment, detail.category_strategy.sell_adjustment)}`} />
         <Metric label="买入分" value={scoreLabel(detail.adjusted_buy_score, detail.buy_score)} tone="up" />
         <Metric label="卖出分" value={scoreLabel(detail.adjusted_sell_score, detail.sell_score)} tone="down" />
         <Metric label="最新底价" value={`¥${latest?.lowest_price.toFixed(2) ?? "-"}`} />
@@ -1008,6 +1014,7 @@ function OpportunityCard({
         <span className={`signal-tag ${signalClass(item.decision_signal.action)}`}>{item.decision_signal.action}</span>
         {item.status}
       </span>
+      <span>{item.category_strategy.profile}</span>
       <div>
         <Metric label="买入" value={String(item.adjusted_buy_score)} tone="up" />
         <Metric label="卖出" value={String(item.adjusted_sell_score)} tone="down" />
@@ -1360,6 +1367,10 @@ function formatPercent(value: number) {
 
 function formatChange(value: number) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}`;
+}
+
+function strategyAdjustmentText(buy: number, sell: number) {
+  return `买 ${formatChange(buy)} / 卖 ${formatChange(sell)}`;
 }
 
 function formatTime(value: string) {
