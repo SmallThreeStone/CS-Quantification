@@ -1,4 +1,4 @@
-import type { Alert, ItemDetail, MonitorItem } from "../types";
+import type { Alert, ItemDetail, MonitorItem, PushRecord } from "../types";
 
 const API_BASE = "";
 
@@ -15,6 +15,7 @@ export const api = {
   collect: () => request<Alert[]>("/api/collect", { method: "POST" }),
   monitor: () => request<MonitorItem[]>("/api/monitor"),
   alerts: () => request<Alert[]>("/api/alerts"),
+  pushRecords: () => request<PushRecord[]>("/api/push-records"),
   opportunities: () => request<MonitorItem[]>("/api/opportunities"),
   item: (id: number) => request<ItemDetail>(`/api/items/${id}`)
 };

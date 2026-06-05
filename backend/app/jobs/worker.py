@@ -3,6 +3,7 @@ import time
 from app.database import SessionLocal
 from app.main import create_app
 from app.services.market_service import MarketService
+from app.services.push_service import PushService
 
 
 def run_once() -> int:
@@ -10,6 +11,7 @@ def run_once() -> int:
     db = SessionLocal()
     try:
         alerts = MarketService(db).collect_active_items()
+        PushService(db).dispatch_alerts(alerts)
         return len(alerts)
     finally:
         db.close()

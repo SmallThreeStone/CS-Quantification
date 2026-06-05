@@ -34,6 +34,19 @@ class AlertOut(BaseModel):
     platform_name: str
 
 
+class PushRecordOut(BaseModel):
+    id: int
+    alert_id: int
+    channel: str
+    status: str
+    target: str
+    error: str
+    created_at: datetime
+    sent_at: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
 class MonitorItemOut(BaseModel):
     id: int
     display_name: str

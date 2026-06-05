@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import { AlertList } from "../components/AlertList";
 import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
-import type { Alert, ItemDetail, MonitorItem } from "../types";
+import type { Alert, ItemDetail, MonitorItem, PushRecord } from "../types";
 
 type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "settings" | "source";
 
@@ -13,6 +13,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("monitor");
   const [items, setItems] = useState<MonitorItem[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,9 +22,14 @@ export default function App() {
   async function refresh() {
     setLoading(true);
     try {
-      const [nextItems, nextAlerts] = await Promise.all([api.monitor(), api.alerts()]);
+      const [nextItems, nextAlerts, nextPushRecords] = await Promise.all([
+        api.monitor(),
+        api.alerts(),
+        api.pushRecords()
+      ]);
       setItems(nextItems);
       setAlerts(nextAlerts);
+      setPushRecords(nextPushRecords);
       if (!selectedId && nextItems[0]) {
         setSelectedId(nextItems[0].id);
       }
@@ -106,7 +112,7 @@ export default function App() {
         {tab === "alerts" && <AlertList alerts={alerts} />}
         {tab === "opportunities" && <OpportunityView items={items} onSelect={setSelectedId} setTab={setTab} />}
         {tab === "settings" && <SettingsView />}
-        {tab === "source" && <SourceView items={items} alerts={alerts} />}
+        {tab === "source" && <SourceView items={items} alerts={alerts} pushRecords={pushRecords} />}
       </main>
     </div>
   );
@@ -252,8 +258,17 @@ function SettingsView() {
   );
 }
 
-function SourceView({ items, alerts }: { items: MonitorItem[]; alerts: Alert[] }) {
+function SourceView({
+  items,
+  alerts,
+  pushRecords
+}: {
+  items: MonitorItem[];
+  alerts: Alert[];
+  pushRecords: PushRecord[];
+}) {
   const hasSnapshots = items.some((item) => item.latest_snapshot);
+  const latestPush = pushRecords[0];
   return (
     <section className="panel settings">
       <h2>数据源状态</h2>
@@ -263,7 +278,23 @@ function SourceView({ items, alerts }: { items: MonitorItem[]; alerts: Alert[] }
         <Metric label="监控饰品" value={`${items.length} 个`} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="最近告警" value={`${alerts.length} 条`} />
+        <Metric label="最近推送" value={latestPush ? `${latestPush.channel}:${latestPush.status}` : "暂无"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>推送记录</h3>
+        {pushRecords.length ? (
+          pushRecords.slice(0, 8).map((record) => (
+            <div className="push-row" key={record.id}>
+              <span>{new Date(record.created_at).toLocaleString()}</span>
+              <strong>{record.channel}</strong>
+              <span>{record.status}</span>
+              <span>{record.error || "ok"}</span>
+            </div>
+          ))
+        ) : (
+          <div className="empty">暂无推送记录</div>
+        )}
       </div>
     </section>
   );

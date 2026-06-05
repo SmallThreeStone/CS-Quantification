@@ -27,6 +27,17 @@ export type Alert = {
   platform_name: string;
 };
 
+export type PushRecord = {
+  id: number;
+  alert_id: number;
+  channel: string;
+  status: string;
+  target: string;
+  error: string;
+  created_at: string;
+  sent_at: string | null;
+};
+
 export type MonitorItem = {
   id: number;
   display_name: string;

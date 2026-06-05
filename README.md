@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1 — MVP 骨架初始化
+V0.1.2 — 微信 / QQ 推送适配与推送记录
 
 ## 功能范围
 
@@ -12,6 +12,7 @@ V0.1 — MVP 骨架初始化
 - 监控总览：底价、在售、最高求购、求购、24h 成交、买入分、卖出分
 - 饰品详情：价格、在售、求购、成交趋势与历史告警
 - 异动告警：在售变化、求购变化、底价变化
+- 推送记录：支持微信 / QQ Webhook 适配，未配置时记录 skipped
 - 机会榜：按买入分和卖出分排序
 - 数据源状态：当前使用 Mock / Steam 适配层占位
 - Docker Compose：frontend、backend、worker、postgres、redis
@@ -57,8 +58,25 @@ docker compose up -d --build
 - `GET /api/monitor`
 - `GET /api/items/{item_id}`
 - `GET /api/alerts`
+- `GET /api/push-records`
 - `GET /api/opportunities`
+
+## 推送配置
+
+```bash
+# 企业微信机器人
+PUSH_CHANNEL=wechat
+WECHAT_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
+
+# QQ 机器人网关
+PUSH_CHANNEL=qq
+QQ_WEBHOOK_URL=https://...
+```
+
+未配置 Webhook 时，系统只记录推送状态为 `skipped`，不会阻断行情采集和告警入库。
 
 ## 版本历史
 
+- V0.1.2 — 增加微信 / QQ Webhook 推送适配、推送记录表和站内推送状态展示。
+- V0.1.1 — 忽略本地开发日志。
 - V0.1 — 初始化 FastAPI 后端、Vite 前端、行情快照、异动告警、机会榜、Docker Compose 和 README。

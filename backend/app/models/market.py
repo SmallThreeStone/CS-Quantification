@@ -78,6 +78,22 @@ class Alert(Base):
     snapshot: Mapped[MarketSnapshot] = relationship()
 
 
+class PushRecord(Base):
+    __tablename__ = "push_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    alert_id: Mapped[int] = mapped_column(ForeignKey("alerts.id"), index=True)
+    channel: Mapped[str] = mapped_column(String(40), index=True)
+    status: Mapped[str] = mapped_column(String(40), default="pending")
+    target: Mapped[str] = mapped_column(String(240), default="")
+    message: Mapped[str] = mapped_column(Text)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    alert: Mapped[Alert] = relationship()
+
+
 class StrategyConfig(Base):
     __tablename__ = "strategy_configs"
 

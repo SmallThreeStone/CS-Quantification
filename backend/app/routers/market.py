@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Alert, Item, MarketSnapshot, Platform
-from app.schemas.market import AlertOut, HealthOut, ItemDetailOut, MonitorItemOut, SnapshotOut
+from app.models import Alert, Item, MarketSnapshot, Platform, PushRecord
+from app.schemas.market import AlertOut, HealthOut, ItemDetailOut, MonitorItemOut, PushRecordOut, SnapshotOut
 from app.services.market_service import MarketService
+from app.services.push_service import PushService
 from app.services.score_service import score_from_snapshot, status_from_alert
 
 router = APIRouter()
@@ -18,6 +19,7 @@ def health() -> HealthOut:
 @router.post("/collect", response_model=list[AlertOut])
 def collect(db: Session = Depends(get_db)) -> list[AlertOut]:
     alerts = MarketService(db).collect_active_items()
+    PushService(db).dispatch_alerts(alerts)
     return [_alert_out(alert) for alert in alerts]
 
 
@@ -61,6 +63,11 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
 def alerts(db: Session = Depends(get_db)) -> list[AlertOut]:
     rows = db.query(Alert).order_by(Alert.created_at.desc()).limit(100).all()
     return [_alert_out(alert) for alert in rows]
+
+
+@router.get("/push-records", response_model=list[PushRecordOut])
+def push_records(db: Session = Depends(get_db)) -> list[PushRecordOut]:
+    return db.query(PushRecord).order_by(PushRecord.created_at.desc()).limit(100).all()
 
 
 @router.get("/opportunities", response_model=list[MonitorItemOut])
