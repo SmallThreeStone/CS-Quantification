@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -23,6 +25,7 @@ from app.schemas.market import (
     MonitorItemOut,
     PushRecordOut,
     SnapshotOut,
+    SourceQualityOut,
     StrategyConfigOut,
     StrategyConfigUpdate,
 )
@@ -112,6 +115,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         alerts=[_alert_out(alert) for alert in alerts],
         heatmap=_heatmap(list(reversed(snapshots))),
         alert_summary=_alert_summary(alerts),
+        source_quality=_source_quality(latest_snapshot),
     )
 
 
@@ -349,6 +353,7 @@ def _monitor_item(db: Session, item: Item) -> MonitorItemOut:
         sell_score=sell_score,
         latest_snapshot=SnapshotOut.model_validate(latest_snapshot) if latest_snapshot else None,
         latest_alert=_alert_out(latest_alert) if latest_alert else None,
+        source_quality=_source_quality(latest_snapshot),
     )
 
 
@@ -460,6 +465,34 @@ def _alert_summary(alerts: list[Alert]) -> list[AlertSummaryOut]:
         )
         for alert_type, rows in sorted(grouped.items(), key=lambda item: len(item[1]), reverse=True)
     ]
+
+
+def _source_quality(snapshot: MarketSnapshot | None) -> SourceQualityOut | None:
+    if snapshot is None:
+        return None
+    try:
+        payload = json.loads(snapshot.raw_payload or "{}")
+    except json.JSONDecodeError:
+        return None
+    quality = payload.get("source_quality") or {}
+    real_fields = list(quality.get("real_fields") or [])
+    fallback_fields = list(quality.get("fallback_fields") or [])
+    total = len(real_fields) + len(fallback_fields)
+    real_ratio = len(real_fields) / total if total else 0
+    if real_ratio >= 0.8:
+        level = "trusted"
+    elif real_ratio > 0:
+        level = "partial"
+    else:
+        level = "fallback"
+    return SourceQualityOut(
+        real_fields=real_fields,
+        fallback_fields=fallback_fields,
+        real_field_count=len(real_fields),
+        fallback_field_count=len(fallback_fields),
+        real_ratio=real_ratio,
+        level=level,
+    )
 
 
 def _ensure_pool(db: Session, pool_id: int | None) -> None:

@@ -505,6 +505,7 @@ function MonitorView({
             <tr>
               <th>饰品</th>
               <th>状态</th>
+              <th>可信度</th>
               <th>底价</th>
               <th>在售</th>
               <th>最高求购</th>
@@ -523,6 +524,7 @@ function MonitorView({
                   <span>{item.market_hash_name}</span>
                 </td>
                 <td><span className="tag">{item.status}</span></td>
+                <td><span className={`quality-tag ${item.source_quality?.level ?? "unknown"}`}>{qualityText(item)}</span></td>
                 <td>¥{item.latest_snapshot?.lowest_price.toFixed(2) ?? "-"}</td>
                 <td>{item.latest_snapshot?.sell_count ?? "-"}</td>
                 <td>¥{item.latest_snapshot?.highest_buy_price.toFixed(2) ?? "-"}</td>
@@ -825,6 +827,7 @@ function SourceView({
   const latestRun = collectRuns[0];
   const qualityTotal = latestRun ? latestRun.real_field_count + latestRun.fallback_field_count : 0;
   const qualityRatio = qualityTotal ? latestRun!.real_field_count / qualityTotal : 0;
+  const lowQualityItems = items.filter((item) => item.source_quality && item.source_quality.level !== "trusted");
   return (
     <section className="panel settings">
       <h2>数据源状态</h2>
@@ -840,6 +843,20 @@ function SourceView({
         <Metric label="补位次数" value={latestRun ? `${latestRun.fallback_count} 次` : "暂无"} />
         <Metric label="最近推送" value={latestPush ? `${latestPush.channel}:${latestPush.status}` : "暂无"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>低可信饰品</h3>
+        {lowQualityItems.length ? (
+          lowQualityItems.map((item) => (
+            <div className="quality-row" key={item.id}>
+              <strong>{item.display_name}</strong>
+              <span>{qualityText(item)}</span>
+              <span>{item.source_quality?.fallback_fields.join(", ") || "-"}</span>
+            </div>
+          ))
+        ) : (
+          <div className="empty">暂无低可信饰品</div>
+        )}
       </div>
       <div className="push-table">
         <h3>采集记录</h3>
@@ -947,4 +964,21 @@ function batchMessage(
   return `${label}完成：共 ${result.total}，成功 ${result.success_count}，失败 ${result.failure_count}${
     failures ? `。${failures}` : ""
   }`;
+}
+
+function qualityText(item: MonitorItem | ItemDetail) {
+  if (!item.source_quality) {
+    return "待采集";
+  }
+  return `${Math.round(item.source_quality.real_ratio * 100)}% ${qualityLevelText(item.source_quality.level)}`;
+}
+
+function qualityLevelText(level: string) {
+  if (level === "trusted") {
+    return "可信";
+  }
+  if (level === "partial") {
+    return "部分补位";
+  }
+  return "补位";
 }

@@ -9,6 +9,15 @@ export type Snapshot = {
   captured_at: string;
 };
 
+export type SourceQuality = {
+  real_fields: string[];
+  fallback_fields: string[];
+  real_field_count: number;
+  fallback_field_count: number;
+  real_ratio: number;
+  level: "trusted" | "partial" | "fallback";
+};
+
 export type Alert = {
   id: number;
   item_id: number;
@@ -147,6 +156,7 @@ export type MonitorItem = {
   sell_score: number;
   latest_snapshot: Snapshot | null;
   latest_alert: Alert | null;
+  source_quality: SourceQuality | null;
 };
 
 export type ItemDetail = MonitorItem & {

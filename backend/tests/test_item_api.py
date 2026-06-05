@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from datetime import datetime
+import json
 
 from app.database import get_db
 from app.main import app
@@ -149,6 +150,45 @@ def test_item_detail_returns_heatmap_and_alert_summary(db_session):
     assert body["heatmap"][0]["max_sell_change"] == 15
     assert body["alert_summary"][0]["alert_type"] == "sell_count_change"
     assert len(body["alert_summary"][0]["recent_alerts"]) == 2
+
+
+def test_monitor_and_detail_return_source_quality(db_session):
+    item = Item(market_hash_name="quality-item", display_name="Quality Item")
+    platform = Platform(code="steam", name="Steam")
+    db_session.add_all([item, platform])
+    db_session.flush()
+    db_session.add(
+        MarketSnapshot(
+            item_id=item.id,
+            platform_id=platform.id,
+            lowest_price=100,
+            sell_count=10,
+            highest_buy_price=90,
+            buy_count=5,
+            volume_24h=3,
+            avg_price_24h=98,
+            raw_payload=json.dumps(
+                {
+                    "source_quality": {
+                        "real_fields": ["lowest_price", "volume_24h"],
+                        "fallback_fields": ["sell_count", "buy_count"],
+                    }
+                }
+            ),
+        )
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    monitor = client.get("/api/monitor")
+    detail = client.get(f"/api/items/{item.id}")
+
+    app.dependency_overrides.clear()
+    assert monitor.status_code == 200
+    assert monitor.json()[0]["source_quality"]["level"] == "partial"
+    assert detail.status_code == 200
+    assert detail.json()["source_quality"]["real_field_count"] == 2
 
 
 def test_discover_item_steam_nameid_updates_item(db_session, monkeypatch):

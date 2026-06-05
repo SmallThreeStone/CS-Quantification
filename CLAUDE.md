@@ -116,7 +116,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.16 — Steam NameID 批量维护
+V0.1.17 — 饰品数据可信度展示
 
 ## 环境要求
 

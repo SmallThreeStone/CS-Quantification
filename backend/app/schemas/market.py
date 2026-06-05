@@ -16,6 +16,15 @@ class SnapshotOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SourceQualityOut(BaseModel):
+    real_fields: list[str]
+    fallback_fields: list[str]
+    real_field_count: int
+    fallback_field_count: int
+    real_ratio: float
+    level: str
+
+
 class AlertOut(BaseModel):
     id: int
     item_id: int
@@ -210,6 +219,7 @@ class MonitorItemOut(BaseModel):
     sell_score: int
     latest_snapshot: SnapshotOut | None
     latest_alert: AlertOut | None
+    source_quality: SourceQualityOut | None
 
 
 class ItemDetailOut(BaseModel):
@@ -226,6 +236,7 @@ class ItemDetailOut(BaseModel):
     alerts: list[AlertOut]
     heatmap: list[HeatmapBucketOut]
     alert_summary: list[AlertSummaryOut]
+    source_quality: SourceQualityOut | None
 
 
 class HealthOut(BaseModel):

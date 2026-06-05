@@ -208,7 +208,8 @@ tbody tr.selected {
 }
 
 .tag,
-.severity {
+.severity,
+.quality-tag {
   display: inline-flex;
   align-items: center;
   height: 24px;
@@ -217,6 +218,22 @@ tbody tr.selected {
   background: #1a2431;
   color: #c7d2e2;
   font-size: 12px;
+}
+
+.quality-tag.trusted {
+  background: #17352d;
+  color: #78e1b1;
+}
+
+.quality-tag.partial {
+  background: #3a3320;
+  color: #ffd37a;
+}
+
+.quality-tag.fallback,
+.quality-tag.unknown {
+  background: #3d2524;
+  color: #ff9b8a;
 }
 
 .severity.p1 {
@@ -571,6 +588,20 @@ tbody tr.selected {
   border-bottom: 1px solid #1d2530;
   padding: 10px 0;
   color: #9ca8b8;
+}
+
+.quality-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) 120px minmax(0, 2fr);
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid #1d2530;
+  padding: 10px 0;
+  color: #9ca8b8;
+}
+
+.quality-row strong {
+  color: #d7dde7;
 }
 
 .collect-row {
