@@ -28,6 +28,32 @@ def test_push_message_contains_decision_fields(db_session):
     assert "详情:" in message
     assert "系统判断:" in message
     assert "历史告警简报" in message
+    assert "在售：" in message
+    assert "求购：" in message
+    assert "底价：" in message
+
+
+def test_push_message_groups_recent_history(db_session):
+    _, platform, alert = create_alert(db_session)
+    db_session.add_all(
+        [
+            history_alert(alert, platform, "在售变化", 328, 259, -69, datetime(2026, 6, 5, 9, 41)),
+            history_alert(alert, platform, "在售变化", 305, 375, 70, datetime(2026, 6, 4, 19, 35)),
+            history_alert(alert, platform, "在售变化", 376, 305, -71, datetime(2026, 6, 4, 19, 10)),
+            history_alert(alert, platform, "在售变化", 300, 320, 20, datetime(2026, 6, 4, 18, 10)),
+            history_alert(alert, platform, "求购变化", 106, 88, -18, datetime(2026, 6, 4, 13, 55)),
+            history_alert(alert, platform, "底价变化", 294.5, 282, -12.5, datetime(2026, 6, 5, 10, 7)),
+        ]
+    )
+    db_session.commit()
+
+    message = PushService(db_session)._message(alert)
+
+    assert "在售：\n06-05 09:41 328.00->259.00 (-69.00)" in message
+    assert "06-04 18:10" not in message
+    assert "求购：\n06-04 13:55 106.00->88.00 (-18.00)" in message
+    assert "底价：\n06-05 10:07 294.50->282.00 (-12.50)" in message
+    assert "259.00->310.00" not in message
 
 
 def create_alert(db_session):
@@ -65,3 +91,29 @@ def create_alert(db_session):
     db_session.add(alert)
     db_session.commit()
     return item, platform, alert
+
+
+def history_alert(
+    source: Alert,
+    platform: Platform,
+    alert_type: str,
+    previous_value: float,
+    current_value: float,
+    absolute_change: float,
+    created_at: datetime,
+) -> Alert:
+    return Alert(
+        item_id=source.item_id,
+        platform_id=platform.id,
+        snapshot_id=source.snapshot_id,
+        alert_type=alert_type,
+        severity="P2",
+        direction="历史",
+        title=f"测试饰品 {alert_type}",
+        detail=f"{alert_type}: {previous_value:.2f} -> {current_value:.2f}",
+        previous_value=previous_value,
+        current_value=current_value,
+        absolute_change=absolute_change,
+        change_rate=absolute_change / max(previous_value, 1),
+        created_at=created_at,
+    )

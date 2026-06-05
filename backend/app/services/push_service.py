@@ -78,7 +78,7 @@ class PushService:
         return {"msg_type": "text", "content": {"text": message}}
 
     def _message(self, alert: Alert) -> str:
-        history = self._history(alert)
+        history = self._history_summary(alert)
         snapshot = alert.snapshot
         lines = [
             f"时间: {alert.created_at:%Y-%m-%d %H:%M:%S}",
@@ -93,21 +93,32 @@ class PushService:
             f"系统判断: {alert.direction}",
             "历史告警简报（近3次）:",
         ]
-        if history:
-            lines.extend(history)
-        else:
-            lines.append("暂无同类历史告警")
+        lines.extend(history)
         return "\n".join(lines)
 
-    def _history(self, alert: Alert) -> list[str]:
-        rows = (
+    def _history_summary(self, alert: Alert) -> list[str]:
+        groups = [("在售", "在售变化"), ("求购", "求购变化"), ("底价", "底价变化")]
+        lines = []
+        for label, alert_type in groups:
+            lines.append(f"{label}：")
+            rows = self._history_rows(alert, alert_type)
+            if rows:
+                lines.extend(self._format_history(row) for row in rows)
+            else:
+                lines.append("暂无")
+        return lines
+
+    def _history_rows(self, alert: Alert, alert_type: str) -> list[Alert]:
+        return (
             self.db.query(Alert)
-            .filter(Alert.item_id == alert.item_id, Alert.alert_type == alert.alert_type, Alert.id != alert.id)
+            .filter(Alert.item_id == alert.item_id, Alert.alert_type == alert_type, Alert.id != alert.id)
             .order_by(Alert.created_at.desc())
             .limit(3)
             .all()
         )
-        return [
-            f"{row.created_at:%m-%d %H:%M} {row.previous_value:.2f}->{row.current_value:.2f} ({row.absolute_change:+.2f})"
-            for row in rows
-        ]
+
+    def _format_history(self, alert: Alert) -> str:
+        return (
+            f"{alert.created_at:%m-%d %H:%M} "
+            f"{alert.previous_value:.2f}->{alert.current_value:.2f} ({alert.absolute_change:+.2f})"
+        )
