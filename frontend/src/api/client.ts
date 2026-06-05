@@ -11,7 +11,8 @@ import type {
   MonitorItem,
   PushRecord,
   StrategyConfig,
-  StrategyConfigUpdate
+  StrategyConfigUpdate,
+  TuningSuggestion
 } from "../types";
 
 const API_BASE = "";
@@ -55,6 +56,7 @@ export const api = {
   alerts: (filters: AlertFilters = {}) => request<Alert[]>(queryPath("/api/alerts", filters)),
   backtests: () => request<BacktestResult[]>("/api/backtests"),
   backtestSummary: () => request<BacktestSummary[]>("/api/backtests/summary"),
+  tuningSuggestions: () => request<TuningSuggestion[]>("/api/backtests/tuning-suggestions"),
   evaluateBacktests: () => request<BacktestResult[]>("/api/backtests/evaluate", { method: "POST" }),
   pushRecords: () => request<PushRecord[]>("/api/push-records"),
   items: () => request<ManagedItem[]>("/api/items"),

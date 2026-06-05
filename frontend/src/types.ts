@@ -106,6 +106,15 @@ export type BacktestSummary = {
   confidence_level: string;
 };
 
+export type TuningSuggestion = {
+  alert_type: string;
+  horizon_minutes: number;
+  sample_count: number;
+  action: string;
+  parameter_hint: string;
+  reason: string;
+};
+
 export type HeatmapBucket = {
   hour: number;
   snapshot_count: number;

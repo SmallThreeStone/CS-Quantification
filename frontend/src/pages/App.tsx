@@ -20,7 +20,8 @@ import type {
   MonitorItem,
   PushRecord,
   StrategyConfig,
-  StrategyConfigUpdate
+  StrategyConfigUpdate,
+  TuningSuggestion
 } from "../types";
 
 type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "items" | "backtests" | "settings" | "source";
@@ -37,6 +38,7 @@ export default function App() {
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
+  const [tuningSuggestions, setTuningSuggestions] = useState<TuningSuggestion[]>([]);
   const [collectRuns, setCollectRuns] = useState<CollectRun[]>([]);
   const [strategy, setStrategy] = useState<StrategyConfig | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -55,6 +57,7 @@ export default function App() {
         nextPushRecords,
         nextBacktests,
         nextBacktestSummary,
+        nextTuningSuggestions,
         nextCollectRuns,
         nextStrategy
       ] = await Promise.all([
@@ -65,6 +68,7 @@ export default function App() {
         api.pushRecords(),
         api.backtests(),
         api.backtestSummary(),
+        api.tuningSuggestions(),
         api.collectRuns(),
         api.strategy()
       ]);
@@ -75,6 +79,7 @@ export default function App() {
       setPushRecords(nextPushRecords);
       setBacktests(nextBacktests);
       setBacktestSummary(nextBacktestSummary);
+      setTuningSuggestions(nextTuningSuggestions);
       setCollectRuns(nextCollectRuns);
       setStrategy(nextStrategy);
       if (!selectedId && nextItems[0]) {
@@ -183,7 +188,13 @@ export default function App() {
         {tab === "opportunities" && <OpportunityView items={items} onSelect={setSelectedId} setTab={setTab} />}
         {tab === "items" && <ItemManager items={managedItems} pools={pools} onChanged={refresh} />}
         {tab === "backtests" && (
-          <BacktestView summary={backtestSummary} results={backtests} onEvaluate={evaluateBacktests} loading={loading} />
+          <BacktestView
+            summary={backtestSummary}
+            suggestions={tuningSuggestions}
+            results={backtests}
+            onEvaluate={evaluateBacktests}
+            loading={loading}
+          />
         )}
         {tab === "settings" && <SettingsView strategy={strategy} onSaved={setStrategy} />}
         {tab === "source" && (
@@ -196,11 +207,13 @@ export default function App() {
 
 function BacktestView({
   summary,
+  suggestions,
   results,
   onEvaluate,
   loading
 }: {
   summary: BacktestSummary[];
+  suggestions: TuningSuggestion[];
   results: BacktestResult[];
   onEvaluate: () => Promise<void>;
   loading: boolean;
@@ -251,6 +264,36 @@ function BacktestView({
           </table>
         </div>
         {!summary.length && <div className="empty">暂无可评估回测</div>}
+      </section>
+      <section className="panel wide">
+        <h2>调参建议</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>类型</th>
+                <th>窗口</th>
+                <th>样本</th>
+                <th>建议</th>
+                <th>参数</th>
+                <th>依据</th>
+              </tr>
+            </thead>
+            <tbody>
+              {suggestions.map((row) => (
+                <tr key={`${row.alert_type}-${row.horizon_minutes}`}>
+                  <td>{row.alert_type}</td>
+                  <td>{formatHorizon(row.horizon_minutes)}</td>
+                  <td>{row.sample_count}</td>
+                  <td><span className={`quality-tag ${suggestionClass(row.action)}`}>{row.action}</span></td>
+                  <td>{row.parameter_hint}</td>
+                  <td>{row.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!suggestions.length && <div className="empty">暂无调参建议</div>}
       </section>
       <section className="panel wide">
         <h2>最近结果</h2>
@@ -1449,6 +1492,16 @@ function confidenceClass(level: string) {
     return "partial";
   }
   return "fallback";
+}
+
+function suggestionClass(action: string) {
+  if (action === "适度放宽") {
+    return "trusted";
+  }
+  if (action === "收紧阈值") {
+    return "fallback";
+  }
+  return "partial";
 }
 
 function signalClass(action: string) {

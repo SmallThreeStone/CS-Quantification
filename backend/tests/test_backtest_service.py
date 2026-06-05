@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.models import Alert, Item, MarketSnapshot, Platform
+from app.models import Alert, BacktestResult, Item, MarketSnapshot, Platform
 from app.services.backtest_service import BacktestService
 
 
@@ -49,6 +49,22 @@ def test_backtest_summary_tracks_extremes_and_profit_loss_ratio(db_session):
     assert summary[0]["max_gain_rate"] == pytest.approx(0.2)
     assert summary[0]["max_drawdown_rate"] == pytest.approx(-0.1)
     assert summary[0]["profit_loss_ratio"] == pytest.approx(2)
+
+
+def test_tuning_suggestions_flag_sample_size_and_threshold_direction(db_session):
+    observe_alert = create_alert_with_snapshots(db_session, direction="偏买入机会", exit_price=120, suffix="observe")
+    tighten_alert = create_alert_with_snapshots(db_session, direction="偏买入机会", exit_price=90, suffix="tighten")
+    loosen_alert = create_alert_with_snapshots(db_session, direction="偏买入机会", exit_price=120, suffix="loosen")
+    create_backtest_results(db_session, observe_alert, "求购变化", [0.1, 0.08, 0.06])
+    create_backtest_results(db_session, tighten_alert, "在售变化", [-0.08] * 10)
+    create_backtest_results(db_session, loosen_alert, "底价变化", [0.08] * 10)
+
+    suggestions = {row["alert_type"]: row for row in BacktestService(db_session).tuning_suggestions()}
+
+    assert suggestions["求购变化"]["action"] == "继续观察"
+    assert suggestions["在售变化"]["action"] == "收紧阈值"
+    assert suggestions["在售变化"]["parameter_hint"] == "min_absolute_sell_change / min_sell_change_rate"
+    assert suggestions["底价变化"]["action"] == "适度放宽"
 
 
 def create_alert_with_snapshots(db_session, direction: str, exit_price: float, suffix: str = "") -> Alert:
@@ -100,3 +116,22 @@ def create_alert_with_snapshots(db_session, direction: str, exit_price: float, s
     db_session.add(alert)
     db_session.commit()
     return alert
+
+
+def create_backtest_results(db_session, alert: Alert, alert_type: str, change_rates: list[float]) -> None:
+    alert.alert_type = alert_type
+    for index, change_rate in enumerate(change_rates):
+        db_session.add(
+            BacktestResult(
+                alert_id=alert.id,
+                item_id=alert.item_id,
+                platform_id=alert.platform_id,
+                horizon_minutes=60,
+                entry_price=100,
+                exit_price=100 * (1 + change_rate),
+                price_change=100 * change_rate,
+                change_rate=change_rate,
+                evaluated_at=alert.created_at + timedelta(minutes=60 + index),
+            )
+        )
+    db_session.commit()

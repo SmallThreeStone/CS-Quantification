@@ -34,6 +34,7 @@ from app.schemas.market import (
     SourceQualityOut,
     StrategyConfigOut,
     StrategyConfigUpdate,
+    TuningSuggestionOut,
 )
 from app.services.market_service import MarketService
 from app.services.backtest_service import BacktestService
@@ -389,6 +390,11 @@ def backtests(db: Session = Depends(get_db)) -> list[BacktestResultOut]:
 @router.get("/backtests/summary", response_model=list[BacktestSummaryOut])
 def backtest_summary(db: Session = Depends(get_db)) -> list[dict]:
     return BacktestService(db).summary()
+
+
+@router.get("/backtests/tuning-suggestions", response_model=list[TuningSuggestionOut])
+def tuning_suggestions(db: Session = Depends(get_db)) -> list[dict]:
+    return BacktestService(db).tuning_suggestions()
 
 
 @router.post("/backtests/evaluate", response_model=list[BacktestResultOut])

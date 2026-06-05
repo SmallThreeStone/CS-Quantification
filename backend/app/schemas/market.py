@@ -118,6 +118,15 @@ class BacktestSummaryOut(BaseModel):
     confidence_level: str
 
 
+class TuningSuggestionOut(BaseModel):
+    alert_type: str
+    horizon_minutes: int
+    sample_count: int
+    action: str
+    parameter_hint: str
+    reason: str
+
+
 class HeatmapBucketOut(BaseModel):
     hour: int
     snapshot_count: int

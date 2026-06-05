@@ -71,6 +71,34 @@ class BacktestService:
             )
         return summary
 
+    def tuning_suggestions(self) -> list[dict]:
+        suggestions = []
+        for row in self.summary():
+            if row["horizon_minutes"] != 60:
+                continue
+            action, parameter_hint, reason = self._suggestion_for_summary(row)
+            suggestions.append(
+                {
+                    "alert_type": row["alert_type"],
+                    "horizon_minutes": row["horizon_minutes"],
+                    "sample_count": row["sample_count"],
+                    "action": action,
+                    "parameter_hint": parameter_hint,
+                    "reason": reason,
+                }
+            )
+        return suggestions
+
+    def _suggestion_for_summary(self, row: dict) -> tuple[str, str, str]:
+        parameter = self._parameter_hint(row["alert_type"])
+        if row["sample_count"] < 10:
+            return "继续观察", parameter, "样本数不足 10 条，暂不建议调整阈值"
+        if row["win_rate"] <= 0.35 or row["avg_change_rate"] <= -0.03:
+            return "收紧阈值", parameter, "同类告警 60 分钟表现偏弱，减少低质量触发"
+        if row["win_rate"] >= 0.65 and row["avg_change_rate"] >= 0.03:
+            return "适度放宽", parameter, "同类告警 60 分钟表现较好，可扩大捕捉范围"
+        return "保持当前", parameter, "胜率和平均变化处于中性区间"
+
     def _has_result(self, alert_id: int, horizon: int) -> bool:
         return (
             self.db.query(BacktestResult)
@@ -113,3 +141,13 @@ class BacktestService:
         if sample_count >= 10:
             return "中"
         return "低"
+
+    def _parameter_hint(self, alert_type: str) -> str:
+        mapping = {
+            "在售变化": "min_absolute_sell_change / min_sell_change_rate",
+            "求购变化": "min_buy_change_rate",
+            "底价变化": "min_price_change_rate",
+            "价格波动异常": "min_price_volatility_rate",
+            "成交量异常": "min_volume_change_rate",
+        }
+        return mapping.get(alert_type, "对应告警阈值")
