@@ -50,6 +50,17 @@ export type StrategyConfig = {
 
 export type StrategyConfigUpdate = Omit<StrategyConfig, "id" | "name">;
 
+export type ManagedItem = {
+  id: number;
+  market_hash_name: string;
+  display_name: string;
+  exterior: string;
+  category: string;
+  is_active: boolean;
+};
+
+export type ManagedItemInput = Omit<ManagedItem, "id">;
+
 export type MonitorItem = {
   id: number;
   display_name: string;

@@ -67,6 +67,33 @@ class StrategyConfigUpdate(BaseModel):
     cooldown_minutes: int = Field(ge=0, le=1440)
 
 
+class ItemOut(BaseModel):
+    id: int
+    market_hash_name: str
+    display_name: str
+    exterior: str
+    category: str
+    is_active: bool
+
+    model_config = {"from_attributes": True}
+
+
+class ItemCreate(BaseModel):
+    market_hash_name: str = Field(min_length=3, max_length=240)
+    display_name: str = Field(min_length=1, max_length=160)
+    exterior: str = Field(default="", max_length=80)
+    category: str = Field(default="", max_length=80)
+    is_active: bool = True
+
+
+class ItemUpdate(BaseModel):
+    market_hash_name: str = Field(min_length=3, max_length=240)
+    display_name: str = Field(min_length=1, max_length=160)
+    exterior: str = Field(default="", max_length=80)
+    category: str = Field(default="", max_length=80)
+    is_active: bool = True
+
+
 class MonitorItemOut(BaseModel):
     id: int
     display_name: str

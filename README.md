@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.3 — 策略配置 API 与前端可编辑阈值
+V0.1.4 — 饰品管理与监控启停
 
 ## 功能范围
 
@@ -15,6 +15,7 @@ V0.1.3 — 策略配置 API 与前端可编辑阈值
 - 推送记录：支持微信 / QQ Webhook 适配，未配置时记录 skipped
 - 机会榜：按买入分和卖出分排序
 - 策略配置：在售变化、求购变化、底价变化和冷却时间可调
+- 饰品管理：新增、编辑、停用、恢复监控饰品
 - 数据源状态：当前使用 Mock / Steam 适配层占位
 - Docker Compose：frontend、backend、worker、postgres、redis
 
@@ -57,7 +58,11 @@ docker compose up -d --build
 - `GET /api/health`
 - `POST /api/collect`
 - `GET /api/monitor`
+- `GET /api/items`
+- `POST /api/items`
 - `GET /api/items/{item_id}`
+- `PUT /api/items/{item_id}`
+- `PATCH /api/items/{item_id}/active`
 - `GET /api/alerts`
 - `GET /api/push-records`
 - `GET /api/strategy`
@@ -80,6 +85,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.4 — 增加饰品管理 API 和前端管理页，支持新增、编辑、停用、恢复监控饰品。
 - V0.1.3 — 增加策略配置读取/更新 API，前端策略页支持编辑告警阈值和冷却时间。
 - V0.1.2 — 增加微信 / QQ Webhook 推送适配、推送记录表和站内推送状态展示。
 - V0.1.1 — 忽略本地开发日志。

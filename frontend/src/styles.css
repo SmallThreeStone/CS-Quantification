@@ -364,6 +364,60 @@ tbody tr.selected {
   font: inherit;
 }
 
+.item-manager {
+  display: grid;
+  gap: 16px;
+}
+
+.item-form {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(140px, 1fr)) 130px 140px;
+  gap: 10px;
+  align-items: end;
+}
+
+.check-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  border: 1px solid #1b2634;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #101720;
+  color: #d7dde7;
+}
+
+.save-item,
+.row-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  border: 1px solid #2f8d76;
+  border-radius: 6px;
+  background: #1f6f5c;
+  color: #d7dde7;
+  cursor: pointer;
+}
+
+.save-item {
+  height: 56px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.row-actions button {
+  height: 30px;
+  min-width: 58px;
+  border-color: #2a3749;
+  background: #151b25;
+}
+
 .settings-actions {
   display: grid;
   grid-template-columns: minmax(180px, 240px) 160px;
@@ -448,5 +502,13 @@ tbody tr.selected {
 
   .settings-actions {
     grid-template-columns: 1fr;
+  }
+
+  .item-form {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-field {
+    min-width: 0;
   }
 }

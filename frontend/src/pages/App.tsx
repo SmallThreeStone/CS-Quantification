@@ -1,17 +1,27 @@
-import { Activity, Bell, Database, Gauge, RefreshCw, Settings, Target } from "lucide-react";
+import { Activity, Bell, Database, Gauge, PackagePlus, RefreshCw, Settings, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { api } from "../api/client";
 import { AlertList } from "../components/AlertList";
 import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
-import type { Alert, ItemDetail, MonitorItem, PushRecord, StrategyConfig, StrategyConfigUpdate } from "../types";
+import type {
+  Alert,
+  ItemDetail,
+  ManagedItem,
+  ManagedItemInput,
+  MonitorItem,
+  PushRecord,
+  StrategyConfig,
+  StrategyConfigUpdate
+} from "../types";
 
-type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "settings" | "source";
+type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "items" | "settings" | "source";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("monitor");
   const [items, setItems] = useState<MonitorItem[]>([]);
+  const [managedItems, setManagedItems] = useState<ManagedItem[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [strategy, setStrategy] = useState<StrategyConfig | null>(null);
@@ -23,13 +33,15 @@ export default function App() {
   async function refresh() {
     setLoading(true);
     try {
-      const [nextItems, nextAlerts, nextPushRecords, nextStrategy] = await Promise.all([
+      const [nextItems, nextManagedItems, nextAlerts, nextPushRecords, nextStrategy] = await Promise.all([
         api.monitor(),
+        api.items(),
         api.alerts(),
         api.pushRecords(),
         api.strategy()
       ]);
       setItems(nextItems);
+      setManagedItems(nextManagedItems);
       setAlerts(nextAlerts);
       setPushRecords(nextPushRecords);
       setStrategy(nextStrategy);
@@ -85,6 +97,9 @@ export default function App() {
           <button className={tab === "opportunities" ? "active" : ""} onClick={() => setTab("opportunities")}>
             <Gauge size={18} /> 机会榜
           </button>
+          <button className={tab === "items" ? "active" : ""} onClick={() => setTab("items")}>
+            <PackagePlus size={18} /> 饰品管理
+          </button>
           <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
             <Settings size={18} /> 策略配置
           </button>
@@ -114,10 +129,127 @@ export default function App() {
         {tab === "detail" && <DetailView detail={detail} />}
         {tab === "alerts" && <AlertList alerts={alerts} />}
         {tab === "opportunities" && <OpportunityView items={items} onSelect={setSelectedId} setTab={setTab} />}
+        {tab === "items" && <ItemManager items={managedItems} onChanged={refresh} />}
         {tab === "settings" && <SettingsView strategy={strategy} onSaved={setStrategy} />}
         {tab === "source" && <SourceView items={items} alerts={alerts} pushRecords={pushRecords} />}
       </main>
     </div>
+  );
+}
+
+const emptyItem: ManagedItemInput = {
+  market_hash_name: "",
+  display_name: "",
+  exterior: "",
+  category: "",
+  is_active: true
+};
+
+function ItemManager({ items, onChanged }: { items: ManagedItem[]; onChanged: () => Promise<void> }) {
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState<ManagedItemInput>(emptyItem);
+  const [saving, setSaving] = useState(false);
+
+  function edit(item: ManagedItem) {
+    setEditingId(item.id);
+    setForm({
+      market_hash_name: item.market_hash_name,
+      display_name: item.display_name,
+      exterior: item.exterior,
+      category: item.category,
+      is_active: item.is_active
+    });
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      if (editingId) {
+        await api.updateItem(editingId, form);
+      } else {
+        await api.createItem(form);
+      }
+      setEditingId(null);
+      setForm(emptyItem);
+      await onChanged();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggle(item: ManagedItem) {
+    await api.setItemActive(item.id, !item.is_active);
+    await onChanged();
+  }
+
+  return (
+    <section className="panel item-manager">
+      <div className="item-form">
+        <label className="field wide-field">
+          <span>Market Hash Name</span>
+          <input
+            value={form.market_hash_name}
+            onChange={(event) => setForm({ ...form, market_hash_name: event.target.value })}
+          />
+        </label>
+        <label className="field">
+          <span>显示名</span>
+          <input value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} />
+        </label>
+        <label className="field">
+          <span>品质</span>
+          <input value={form.exterior} onChange={(event) => setForm({ ...form, exterior: event.target.value })} />
+        </label>
+        <label className="field">
+          <span>分类</span>
+          <input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
+        </label>
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(event) => setForm({ ...form, is_active: event.target.checked })}
+          />
+          <span>加入监控</span>
+        </label>
+        <button className="primary save-item" onClick={save} disabled={saving || !form.market_hash_name || !form.display_name}>
+          <PackagePlus size={16} /> {editingId ? "保存饰品" : "新增饰品"}
+        </button>
+      </div>
+
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>饰品</th>
+              <th>品质</th>
+              <th>分类</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id}>
+                <td>
+                  <strong>{item.display_name}</strong>
+                  <span>{item.market_hash_name}</span>
+                </td>
+                <td>{item.exterior || "-"}</td>
+                <td>{item.category || "-"}</td>
+                <td><span className="tag">{item.is_active ? "监控中" : "已停用"}</span></td>
+                <td>
+                  <div className="row-actions">
+                    <button onClick={() => edit(item)}>编辑</button>
+                    <button onClick={() => toggle(item)}>{item.is_active ? "停用" : "恢复"}</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -426,6 +558,7 @@ function title(tab: Tab) {
     detail: "饰品详情",
     alerts: "异动告警",
     opportunities: "机会榜",
+    items: "饰品管理",
     settings: "策略配置",
     source: "数据源状态"
   };

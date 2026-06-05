@@ -1,4 +1,13 @@
-import type { Alert, ItemDetail, MonitorItem, PushRecord, StrategyConfig, StrategyConfigUpdate } from "../types";
+import type {
+  Alert,
+  ItemDetail,
+  ManagedItem,
+  ManagedItemInput,
+  MonitorItem,
+  PushRecord,
+  StrategyConfig,
+  StrategyConfigUpdate
+} from "../types";
 
 const API_BASE = "";
 
@@ -16,6 +25,21 @@ export const api = {
   monitor: () => request<MonitorItem[]>("/api/monitor"),
   alerts: () => request<Alert[]>("/api/alerts"),
   pushRecords: () => request<PushRecord[]>("/api/push-records"),
+  items: () => request<ManagedItem[]>("/api/items"),
+  createItem: (payload: ManagedItemInput) =>
+    request<ManagedItem>("/api/items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }),
+  updateItem: (id: number, payload: ManagedItemInput) =>
+    request<ManagedItem>(`/api/items/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }),
+  setItemActive: (id: number, isActive: boolean) =>
+    request<ManagedItem>(`/api/items/${id}/active?is_active=${isActive}`, { method: "PATCH" }),
   strategy: () => request<StrategyConfig>("/api/strategy"),
   updateStrategy: (payload: StrategyConfigUpdate) =>
     request<StrategyConfig>("/api/strategy", {
