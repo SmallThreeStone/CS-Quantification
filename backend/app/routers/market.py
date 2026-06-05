@@ -14,6 +14,7 @@ from app.schemas.market import (
     AlertSummaryOut,
     HeatmapBucketOut,
     HealthOut,
+    HistoryPointOut,
     ItemCreate,
     ItemDetailOut,
     ItemOut,
@@ -126,6 +127,24 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         alert_summary=_alert_summary(alerts),
         source_quality=source_quality,
     )
+
+
+@router.get("/items/{item_id}/history/price", response_model=list[HistoryPointOut])
+def item_price_history(item_id: int, limit: int = Query(default=240, ge=1, le=5000), db: Session = Depends(get_db)) -> list[HistoryPointOut]:
+    _ensure_item(db, item_id)
+    return _history_points(db, item_id, "lowest_price", limit)
+
+
+@router.get("/items/{item_id}/history/sell", response_model=list[HistoryPointOut])
+def item_sell_history(item_id: int, limit: int = Query(default=240, ge=1, le=5000), db: Session = Depends(get_db)) -> list[HistoryPointOut]:
+    _ensure_item(db, item_id)
+    return _history_points(db, item_id, "sell_count", limit)
+
+
+@router.get("/items/{item_id}/history/buy", response_model=list[HistoryPointOut])
+def item_buy_history(item_id: int, limit: int = Query(default=240, ge=1, le=5000), db: Session = Depends(get_db)) -> list[HistoryPointOut]:
+    _ensure_item(db, item_id)
+    return _history_points(db, item_id, "buy_count", limit)
 
 
 @router.put("/items/{item_id}", response_model=ItemOut)
@@ -546,6 +565,25 @@ def _quality_adjusted_scores(
 def _ensure_pool(db: Session, pool_id: int | None) -> None:
     if pool_id is not None and db.get(MonitorPool, pool_id) is None:
         raise HTTPException(status_code=404, detail="monitor pool not found")
+
+
+def _ensure_item(db: Session, item_id: int) -> None:
+    if db.get(Item, item_id) is None:
+        raise HTTPException(status_code=404, detail="item not found")
+
+
+def _history_points(db: Session, item_id: int, field: str, limit: int) -> list[HistoryPointOut]:
+    rows = (
+        db.query(MarketSnapshot)
+        .filter(MarketSnapshot.item_id == item_id)
+        .order_by(MarketSnapshot.captured_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        HistoryPointOut(captured_at=snapshot.captured_at, value=float(getattr(snapshot, field)))
+        for snapshot in reversed(rows)
+    ]
 
 
 def _default_strategy(db: Session) -> StrategyConfig:

@@ -152,6 +152,56 @@ def test_item_detail_returns_heatmap_and_alert_summary(db_session):
     assert len(body["alert_summary"][0]["recent_alerts"]) == 2
 
 
+def test_item_history_endpoints_return_metric_series(db_session):
+    platform = Platform(code="steam", name="Steam")
+    item = Item(market_hash_name="history-item", display_name="History Item")
+    db_session.add_all([platform, item])
+    db_session.flush()
+    db_session.add_all(
+        [
+            MarketSnapshot(
+                item_id=item.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=20,
+                highest_buy_price=95,
+                buy_count=10,
+                volume_24h=5,
+                avg_price_24h=98,
+                captured_at=datetime(2026, 6, 5, 9, 0, 0),
+            ),
+            MarketSnapshot(
+                item_id=item.id,
+                platform_id=platform.id,
+                lowest_price=110,
+                sell_count=25,
+                highest_buy_price=96,
+                buy_count=12,
+                volume_24h=7,
+                avg_price_24h=101,
+                captured_at=datetime(2026, 6, 5, 10, 0, 0),
+            ),
+        ]
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    price = client.get(f"/api/items/{item.id}/history/price")
+    sell = client.get(f"/api/items/{item.id}/history/sell", params={"limit": 1})
+    buy = client.get(f"/api/items/{item.id}/history/buy")
+    missing = client.get("/api/items/999/history/price")
+
+    app.dependency_overrides.clear()
+    assert price.status_code == 200
+    assert [row["value"] for row in price.json()] == [100, 110]
+    assert sell.status_code == 200
+    assert [row["value"] for row in sell.json()] == [25]
+    assert buy.status_code == 200
+    assert [row["value"] for row in buy.json()] == [10, 12]
+    assert missing.status_code == 404
+
+
 def test_alerts_can_be_filtered(db_session):
     steam = Platform(code="steam", name="Steam")
     buff = Platform(code="buff", name="BUFF")

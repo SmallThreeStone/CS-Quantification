@@ -16,6 +16,11 @@ class SnapshotOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class HistoryPointOut(BaseModel):
+    captured_at: datetime
+    value: float
+
+
 class SourceQualityOut(BaseModel):
     real_fields: list[str]
     fallback_fields: list[str]

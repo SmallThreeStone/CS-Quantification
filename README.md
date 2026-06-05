@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.25 — 增强机会榜分组
+V0.1.26 — 增加历史指标接口
 
 ## 功能范围
 
@@ -108,6 +108,9 @@ docker compose up -d --build
 - `GET /api/items`
 - `POST /api/items`
 - `GET /api/items/{item_id}`
+- `GET /api/items/{item_id}/history/price`
+- `GET /api/items/{item_id}/history/sell`
+- `GET /api/items/{item_id}/history/buy`
 - `PUT /api/items/{item_id}`
 - `PATCH /api/items/{item_id}/active`
 - `GET /api/monitor-pools`
@@ -137,6 +140,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.26 — 增加价格历史、在售历史和求购历史 API，支持独立拉取单品指标序列。
 - V0.1.25 — 增强机会榜分组视图，按买入机会、卖压风险、扫货拉升、异常波动和观察候选聚合。
 - V0.1.24 — 增加监控总览表头排序，支持按状态、底价、在售、求购、成交量和评分排序。
 - V0.1.23 — 增加告警 API 查询参数和前端告警筛选控件。
