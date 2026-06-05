@@ -22,7 +22,9 @@ from app.schemas.market import (
     SteamOrderbookValidationOut,
     SteamNameIdBatchOut,
     SteamNameIdOut,
+    MonitorPoolCreate,
     MonitorPoolOut,
+    MonitorPoolUpdate,
     MonitorItemOut,
     PushRecordOut,
     SnapshotOut,
@@ -289,17 +291,49 @@ def _batch_result(results: list[SteamOrderbookValidationOut]) -> SteamNameIdBatc
 @router.get("/monitor-pools", response_model=list[MonitorPoolOut])
 def monitor_pools(db: Session = Depends(get_db)) -> list[MonitorPoolOut]:
     pools = db.query(MonitorPool).order_by(MonitorPool.interval_minutes.asc()).all()
-    return [
-        MonitorPoolOut(
-            id=pool.id,
-            name=pool.name,
-            interval_minutes=pool.interval_minutes,
-            description=pool.description,
-            last_collected_at=pool.last_collected_at,
-            active_item_count=sum(1 for item in pool.items if item.is_active),
-        )
-        for pool in pools
-    ]
+    return [_monitor_pool_out(pool) for pool in pools]
+
+
+@router.post("/monitor-pools", response_model=MonitorPoolOut)
+def create_monitor_pool(payload: MonitorPoolCreate, db: Session = Depends(get_db)) -> MonitorPoolOut:
+    if db.query(MonitorPool).filter_by(name=payload.name).first() is not None:
+        raise HTTPException(status_code=409, detail="monitor pool already exists")
+    pool = MonitorPool(
+        name=payload.name,
+        interval_minutes=payload.interval_minutes,
+        description=payload.description,
+    )
+    db.add(pool)
+    db.commit()
+    db.refresh(pool)
+    return _monitor_pool_out(pool)
+
+
+@router.put("/monitor-pools/{pool_id}", response_model=MonitorPoolOut)
+def update_monitor_pool(pool_id: int, payload: MonitorPoolUpdate, db: Session = Depends(get_db)) -> MonitorPoolOut:
+    pool = db.get(MonitorPool, pool_id)
+    if pool is None:
+        raise HTTPException(status_code=404, detail="monitor pool not found")
+    duplicate = db.query(MonitorPool).filter(MonitorPool.name == payload.name, MonitorPool.id != pool_id).first()
+    if duplicate is not None:
+        raise HTTPException(status_code=409, detail="monitor pool already exists")
+    pool.name = payload.name
+    pool.interval_minutes = payload.interval_minutes
+    pool.description = payload.description
+    db.commit()
+    db.refresh(pool)
+    return _monitor_pool_out(pool)
+
+
+def _monitor_pool_out(pool: MonitorPool) -> MonitorPoolOut:
+    return MonitorPoolOut(
+        id=pool.id,
+        name=pool.name,
+        interval_minutes=pool.interval_minutes,
+        description=pool.description,
+        last_collected_at=pool.last_collected_at,
+        active_item_count=sum(1 for item in pool.items if item.is_active),
+    )
 
 
 @router.get("/collect-runs", response_model=list[CollectRunLogOut])

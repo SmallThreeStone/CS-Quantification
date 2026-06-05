@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.26 — 增加历史指标接口
+V0.1.27 — 增加监控池管理
 
 ## 功能范围
 
@@ -21,7 +21,7 @@ V0.1.26 — 增加历史指标接口
 - Steam NameID 发现：可从饰品管理页触发自动发现并写回字段
 - Steam 订单簿验证：可在饰品管理页校验 NameID 是否能获取真实在售/求购深度
 - Steam NameID 批量维护：支持批量发现缺失 ID 和批量验证订单簿深度
-- 监控池：重点池、观察池、事件池分组，worker 按池间隔采集
+- 监控池：重点池、观察池、事件池分组，支持新增、编辑池名称、采集间隔和说明，worker 按池间隔采集
 - 告警回测：记录告警后多窗口价格变化、胜率和平均变化
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
 - 数据源状态：展示 Mock / Steam 适配层、订单簿开关、真实字段占比、补位字段、fallback 次数和最近错误
@@ -114,6 +114,8 @@ docker compose up -d --build
 - `PUT /api/items/{item_id}`
 - `PATCH /api/items/{item_id}/active`
 - `GET /api/monitor-pools`
+- `POST /api/monitor-pools`
+- `PUT /api/monitor-pools/{pool_id}`
 - `GET /api/collect-runs`
 - `GET /api/alerts`
 - `GET /api/backtests`
@@ -140,6 +142,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.27 — 增加监控池新增和编辑 API，饰品管理页支持维护池名称、采集间隔和说明。
 - V0.1.26 — 增加价格历史、在售历史和求购历史 API，支持独立拉取单品指标序列。
 - V0.1.25 — 增强机会榜分组视图，按买入机会、卖压风险、扫货拉升、异常波动和观察候选聚合。
 - V0.1.24 — 增加监控总览表头排序，支持按状态、底价、在售、求购、成交量和评分排序。

@@ -217,6 +217,18 @@ class MonitorPoolOut(BaseModel):
     active_item_count: int
 
 
+class MonitorPoolCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    interval_minutes: int = Field(ge=1, le=1440)
+    description: str = Field(default="", max_length=240)
+
+
+class MonitorPoolUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    interval_minutes: int = Field(ge=1, le=1440)
+    description: str = Field(default="", max_length=240)
+
+
 class MonitorItemOut(BaseModel):
     id: int
     display_name: str

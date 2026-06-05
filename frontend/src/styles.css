@@ -581,6 +581,61 @@ tbody tr.selected {
   gap: 16px;
 }
 
+.item-manager-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.pool-form {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(140px, 180px) minmax(220px, 2fr) 140px;
+  gap: 10px;
+  align-items: end;
+}
+
+.pool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.pool-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) repeat(3, minmax(92px, 130px));
+  gap: 8px;
+  align-items: stretch;
+  border: 1px solid #1d2530;
+  border-radius: 8px;
+  padding: 10px;
+  background: #101720;
+  color: #d7dde7;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pool-card:hover {
+  border-color: #2a86c9;
+}
+
+.pool-card > div:first-child {
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  min-width: 0;
+}
+
+.pool-card strong,
+.pool-card span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pool-card span {
+  color: #8491a5;
+  font-size: 12px;
+}
+
 .item-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -763,6 +818,11 @@ tbody tr.selected {
   }
 
   .item-form {
+    grid-template-columns: 1fr;
+  }
+
+  .pool-form,
+  .pool-card {
     grid-template-columns: 1fr;
   }
 

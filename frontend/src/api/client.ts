@@ -7,6 +7,7 @@ import type {
   ManagedItem,
   ManagedItemInput,
   MonitorPool,
+  MonitorPoolInput,
   MonitorItem,
   PushRecord,
   StrategyConfig,
@@ -58,6 +59,18 @@ export const api = {
   pushRecords: () => request<PushRecord[]>("/api/push-records"),
   items: () => request<ManagedItem[]>("/api/items"),
   monitorPools: () => request<MonitorPool[]>("/api/monitor-pools"),
+  createMonitorPool: (payload: MonitorPoolInput) =>
+    request<MonitorPool>("/api/monitor-pools", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }),
+  updateMonitorPool: (id: number, payload: MonitorPoolInput) =>
+    request<MonitorPool>(`/api/monitor-pools/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }),
   createItem: (payload: ManagedItemInput) =>
     request<ManagedItem>("/api/items", {
       method: "POST",

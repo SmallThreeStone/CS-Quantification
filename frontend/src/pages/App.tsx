@@ -16,6 +16,7 @@ import type {
   ManagedItem,
   ManagedItemInput,
   MonitorPool,
+  MonitorPoolInput,
   MonitorItem,
   PushRecord,
   StrategyConfig,
@@ -365,6 +366,12 @@ const emptyItem: ManagedItemInput = {
   pool_id: null
 };
 
+const emptyPool: MonitorPoolInput = {
+  name: "",
+  interval_minutes: 10,
+  description: ""
+};
+
 function ItemManager({
   items,
   pools,
@@ -376,7 +383,10 @@ function ItemManager({
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ManagedItemInput>(emptyItem);
+  const [editingPoolId, setEditingPoolId] = useState<number | null>(null);
+  const [poolForm, setPoolForm] = useState<MonitorPoolInput>(emptyPool);
   const [saving, setSaving] = useState(false);
+  const [savingPool, setSavingPool] = useState(false);
   const [discoveringId, setDiscoveringId] = useState<number | null>(null);
   const [validatingId, setValidatingId] = useState<number | null>(null);
   const [batching, setBatching] = useState<"discover" | "validate" | null>(null);
@@ -395,6 +405,15 @@ function ItemManager({
     });
   }
 
+  function editPool(pool: MonitorPool) {
+    setEditingPoolId(pool.id);
+    setPoolForm({
+      name: pool.name,
+      interval_minutes: pool.interval_minutes,
+      description: pool.description
+    });
+  }
+
   async function save() {
     setSaving(true);
     try {
@@ -408,6 +427,22 @@ function ItemManager({
       await onChanged();
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function savePool() {
+    setSavingPool(true);
+    try {
+      if (editingPoolId) {
+        await api.updateMonitorPool(editingPoolId, poolForm);
+      } else {
+        await api.createMonitorPool(poolForm);
+      }
+      setEditingPoolId(null);
+      setPoolForm(emptyPool);
+      await onChanged();
+    } finally {
+      setSavingPool(false);
     }
   }
 
@@ -467,7 +502,61 @@ function ItemManager({
   }
 
   return (
-    <section className="panel item-manager">
+    <div className="item-manager-layout">
+      <section className="panel item-manager">
+        <div className="section-head">
+          <h2>监控池管理</h2>
+          <span className="tag">{pools.length} 个池</span>
+        </div>
+        <div className="pool-form">
+          <label className="field">
+            <span>池名称</span>
+            <input value={poolForm.name} onChange={(event) => setPoolForm({ ...poolForm, name: event.target.value })} />
+          </label>
+          <label className="field">
+            <span>采集间隔 分钟</span>
+            <input
+              type="number"
+              min={1}
+              max={1440}
+              value={poolForm.interval_minutes}
+              onChange={(event) => setPoolForm({ ...poolForm, interval_minutes: Number(event.target.value) })}
+            />
+          </label>
+          <label className="field pool-description">
+            <span>说明</span>
+            <input
+              value={poolForm.description}
+              onChange={(event) => setPoolForm({ ...poolForm, description: event.target.value })}
+            />
+          </label>
+          <button className="primary save-item" onClick={savePool} disabled={savingPool || !poolForm.name}>
+            <Settings size={16} /> {editingPoolId ? "保存池" : "新增池"}
+          </button>
+        </div>
+        <div className="pool-grid">
+          {pools.map((pool) => (
+            <button className="pool-card" key={pool.id} onClick={() => editPool(pool)}>
+              <div>
+                <strong>{pool.name}</strong>
+                <span>{pool.description || "暂无说明"}</span>
+              </div>
+              <Metric label="间隔" value={`${pool.interval_minutes} 分钟`} />
+              <Metric label="活跃饰品" value={`${pool.active_item_count} 个`} />
+              <Metric
+                label="最近采集"
+                value={pool.last_collected_at ? formatTime(pool.last_collected_at) : "待采集"}
+              />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel item-manager">
+        <div className="section-head">
+          <h2>饰品管理</h2>
+          <span className="tag">{items.length} 个饰品</span>
+        </div>
       <div className="item-form">
         <label className="field wide-field">
           <span>Market Hash Name</span>
@@ -573,7 +662,8 @@ function ItemManager({
           </tbody>
         </table>
       </div>
-    </section>
+      </section>
+    </div>
   );
 }
 

@@ -77,6 +77,45 @@ def test_monitor_pools_return_active_item_count(db_session):
     assert response.json()[0]["active_item_count"] == 1
 
 
+def test_monitor_pool_can_be_created_and_updated(db_session):
+    db_session.add(MonitorPool(name="重点池", interval_minutes=10, description="旧"))
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    created = client.post(
+        "/api/monitor-pools",
+        json={"name": "事件池", "interval_minutes": 5, "description": "Major 期间"},
+    )
+    updated = client.put(
+        f"/api/monitor-pools/{created.json()['id']}",
+        json={"name": "事件高频池", "interval_minutes": 3, "description": "贴纸打折"},
+    )
+    duplicate_create = client.post(
+        "/api/monitor-pools",
+        json={"name": "重点池", "interval_minutes": 5, "description": ""},
+    )
+    duplicate_update = client.put(
+        f"/api/monitor-pools/{created.json()['id']}",
+        json={"name": "重点池", "interval_minutes": 3, "description": ""},
+    )
+    missing = client.put(
+        "/api/monitor-pools/999",
+        json={"name": "不存在", "interval_minutes": 3, "description": ""},
+    )
+
+    app.dependency_overrides.clear()
+    assert created.status_code == 200
+    assert created.json()["name"] == "事件池"
+    assert created.json()["active_item_count"] == 0
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "事件高频池"
+    assert updated.json()["interval_minutes"] == 3
+    assert duplicate_create.status_code == 409
+    assert duplicate_update.status_code == 409
+    assert missing.status_code == 404
+
+
 def test_item_detail_returns_heatmap_and_alert_summary(db_session):
     platform = Platform(code="steam", name="Steam")
     item = Item(market_hash_name="heatmap-item", display_name="Heatmap Item")

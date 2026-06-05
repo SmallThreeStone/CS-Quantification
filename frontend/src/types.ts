@@ -146,6 +146,8 @@ export type MonitorPool = {
   active_item_count: number;
 };
 
+export type MonitorPoolInput = Omit<MonitorPool, "id" | "last_collected_at" | "active_item_count">;
+
 export type MonitorItem = {
   id: number;
   display_name: string;
