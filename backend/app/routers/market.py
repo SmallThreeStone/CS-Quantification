@@ -126,7 +126,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         adjusted_buy_score=adjusted_buy_score,
         adjusted_sell_score=adjusted_sell_score,
         quality_penalty=quality_penalty,
-        snapshots=[SnapshotOut.model_validate(snapshot) for snapshot in reversed(snapshots)],
+        snapshots=[_snapshot_out(snapshot) for snapshot in reversed(snapshots)],
         alerts=[_alert_out(alert) for alert in alerts],
         heatmap=_heatmap(list(reversed(snapshots))),
         alert_summary=_alert_summary(alerts),
@@ -445,7 +445,7 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
         adjusted_buy_score=adjusted_buy_score,
         adjusted_sell_score=adjusted_sell_score,
         quality_penalty=quality_penalty,
-        latest_snapshot=SnapshotOut.model_validate(latest_snapshot) if latest_snapshot else None,
+        latest_snapshot=_snapshot_out(latest_snapshot) if latest_snapshot else None,
         latest_alert=_alert_out(latest_alert) if latest_alert else None,
         source_quality=source_quality,
         decision_signal=decision_signal,
@@ -470,6 +470,23 @@ def _alert_out(alert: Alert) -> AlertOut:
         created_at=alert.created_at,
         item_name=alert.item.display_name,
         platform_name=platform.name,
+    )
+
+
+def _snapshot_out(snapshot: MarketSnapshot) -> SnapshotOut:
+    spread_amount = snapshot.lowest_price - snapshot.highest_buy_price
+    spread_rate = spread_amount / snapshot.lowest_price if snapshot.lowest_price else 0
+    return SnapshotOut(
+        id=snapshot.id,
+        lowest_price=snapshot.lowest_price,
+        sell_count=snapshot.sell_count,
+        highest_buy_price=snapshot.highest_buy_price,
+        buy_count=snapshot.buy_count,
+        volume_24h=snapshot.volume_24h,
+        avg_price_24h=snapshot.avg_price_24h,
+        spread_amount=spread_amount,
+        spread_rate=spread_rate,
+        captured_at=snapshot.captured_at,
     )
 
 

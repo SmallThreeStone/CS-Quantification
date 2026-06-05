@@ -187,6 +187,8 @@ def test_item_detail_returns_heatmap_and_alert_summary(db_session):
     assert body["heatmap"][0]["hour"] == 10
     assert body["heatmap"][0]["snapshot_count"] == 2
     assert body["heatmap"][0]["max_sell_change"] == 15
+    assert body["snapshots"][-1]["spread_amount"] == 14
+    assert round(body["snapshots"][-1]["spread_rate"], 4) == round(14 / 110, 4)
     assert body["alert_summary"][0]["alert_type"] == "sell_count_change"
     assert len(body["alert_summary"][0]["recent_alerts"]) == 2
 

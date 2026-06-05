@@ -2,7 +2,7 @@ import type { Snapshot } from "../types";
 
 type Props = {
   data: Snapshot[];
-  field: "lowest_price" | "sell_count" | "buy_count" | "volume_24h";
+  field: "lowest_price" | "sell_count" | "buy_count" | "volume_24h" | "spread_amount" | "spread_rate";
   kind?: "line" | "bar";
 };
 

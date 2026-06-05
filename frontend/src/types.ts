@@ -6,6 +6,8 @@ export type Snapshot = {
   buy_count: number;
   volume_24h: number;
   avg_price_24h: number;
+  spread_amount: number;
+  spread_rate: number;
   captured_at: string;
 };
 

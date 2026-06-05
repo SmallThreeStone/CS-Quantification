@@ -24,7 +24,7 @@ import type {
 } from "../types";
 
 type Tab = "monitor" | "detail" | "alerts" | "opportunities" | "items" | "backtests" | "settings" | "source";
-type MonitorSortKey = "activity" | "price" | "sell" | "buy" | "volume" | "buyScore" | "sellScore";
+type MonitorSortKey = "activity" | "price" | "sell" | "buy" | "spread" | "volume" | "buyScore" | "sellScore";
 type SortDirection = "asc" | "desc";
 
 export default function App() {
@@ -711,6 +711,7 @@ function MonitorView({
               <SortableHead label="在售" active={sortKey === "sell"} direction={sortDirection} onClick={() => changeSort("sell")} />
               <th>最高求购</th>
               <SortableHead label="求购" active={sortKey === "buy"} direction={sortDirection} onClick={() => changeSort("buy")} />
+              <SortableHead label="价差率" active={sortKey === "spread"} direction={sortDirection} onClick={() => changeSort("spread")} />
               <SortableHead label="24h 成交" active={sortKey === "volume"} direction={sortDirection} onClick={() => changeSort("volume")} />
               <th>池</th>
               <SortableHead label="买入分" active={sortKey === "buyScore"} direction={sortDirection} onClick={() => changeSort("buyScore")} />
@@ -736,6 +737,10 @@ function MonitorView({
                 <td>{item.latest_snapshot?.sell_count ?? "-"}</td>
                 <td>¥{item.latest_snapshot?.highest_buy_price.toFixed(2) ?? "-"}</td>
                 <td>{item.latest_snapshot?.buy_count ?? "-"}</td>
+                <td>
+                  <strong>{item.latest_snapshot ? formatPercent(item.latest_snapshot.spread_rate) : "-"}</strong>
+                  {item.latest_snapshot && <span>¥{item.latest_snapshot.spread_amount.toFixed(2)}</span>}
+                </td>
                 <td>{item.latest_snapshot?.volume_24h ?? "-"}</td>
                 <td>{item.pool_name ?? "未分组"}</td>
                 <td>
@@ -789,6 +794,9 @@ function sortValue(item: MonitorItem, key: MonitorSortKey) {
   if (key === "buy") {
     return item.latest_snapshot?.buy_count ?? -1;
   }
+  if (key === "spread") {
+    return item.latest_snapshot?.spread_rate ?? -1;
+  }
   if (key === "volume") {
     return item.latest_snapshot?.volume_24h ?? -1;
   }
@@ -815,6 +823,7 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
         <Metric label="买入分" value={scoreLabel(detail.adjusted_buy_score, detail.buy_score)} tone="up" />
         <Metric label="卖出分" value={scoreLabel(detail.adjusted_sell_score, detail.sell_score)} tone="down" />
         <Metric label="最新底价" value={`¥${latest?.lowest_price.toFixed(2) ?? "-"}`} />
+        <Metric label="买卖价差" value={latest ? `¥${latest.spread_amount.toFixed(2)} / ${formatPercent(latest.spread_rate)}` : "-"} />
       </section>
       <section className="panel">
         <h3>价格走势</h3>
@@ -831,6 +840,10 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
       <section className="panel">
         <h3>24h 成交</h3>
         <MiniChart data={detail.snapshots} field="volume_24h" kind="bar" />
+      </section>
+      <section className="panel wide">
+        <h3>买卖盘价差</h3>
+        <MiniChart data={detail.snapshots} field="spread_rate" />
       </section>
       <section className="panel wide">
         <h3>时间段热力图</h3>

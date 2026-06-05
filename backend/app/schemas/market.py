@@ -11,9 +11,9 @@ class SnapshotOut(BaseModel):
     buy_count: int
     volume_24h: int
     avg_price_24h: float
+    spread_amount: float
+    spread_rate: float
     captured_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class HistoryPointOut(BaseModel):
