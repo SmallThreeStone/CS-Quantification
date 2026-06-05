@@ -356,6 +356,119 @@ def test_monitor_and_detail_return_source_quality(db_session):
     assert monitor.json()[0]["adjusted_buy_score"] < monitor.json()[0]["buy_score"]
     assert detail.status_code == 200
     assert detail.json()["source_quality"]["real_field_count"] == 2
+    assert detail.json()["decision_signal"]["action"] == "观望"
+    assert detail.json()["decision_signal"]["reason"] == "参考分不足"
+
+
+def test_decision_signal_returns_buy_sell_and_watch(db_session):
+    platform = Platform(code="steam", name="Steam")
+    buy_item = Item(market_hash_name="buy-signal", display_name="Buy Signal")
+    sell_item = Item(market_hash_name="sell-signal", display_name="Sell Signal")
+    watch_item = Item(market_hash_name="watch-signal", display_name="Watch Signal")
+    db_session.add_all([platform, buy_item, sell_item, watch_item])
+    db_session.flush()
+    db_session.add_all(
+        [
+            MarketSnapshot(
+                item_id=buy_item.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=96,
+                buy_count=5,
+                volume_24h=10,
+                avg_price_24h=98,
+                raw_payload=json.dumps(
+                    {
+                        "source_quality": {
+                            "real_fields": ["lowest_price", "sell_count", "highest_buy_price", "buy_count"],
+                            "fallback_fields": [],
+                        }
+                    }
+                ),
+            ),
+            MarketSnapshot(
+                item_id=sell_item.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=96,
+                buy_count=5,
+                volume_24h=10,
+                avg_price_24h=98,
+                raw_payload=json.dumps(
+                    {
+                        "source_quality": {
+                            "real_fields": ["lowest_price", "sell_count", "highest_buy_price", "buy_count"],
+                            "fallback_fields": [],
+                        }
+                    }
+                ),
+            ),
+            MarketSnapshot(
+                item_id=watch_item.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=96,
+                buy_count=5,
+                volume_24h=10,
+                avg_price_24h=98,
+                raw_payload=json.dumps(
+                    {
+                        "source_quality": {
+                            "real_fields": ["lowest_price"],
+                            "fallback_fields": ["sell_count", "highest_buy_price", "buy_count"],
+                        }
+                    }
+                ),
+            ),
+        ]
+    )
+    db_session.flush()
+    db_session.add_all(
+        [
+            Alert(
+                item_id=buy_item.id,
+                platform_id=platform.id,
+                snapshot_id=buy_item.snapshots[0].id,
+                alert_type="在售变化",
+                direction="偏买入机会",
+                title="buy",
+                detail="buy",
+                previous_value=20,
+                current_value=10,
+                absolute_change=-10,
+                change_rate=-0.5,
+            ),
+            Alert(
+                item_id=sell_item.id,
+                platform_id=platform.id,
+                snapshot_id=sell_item.snapshots[0].id,
+                alert_type="在售变化",
+                direction="偏卖压风险",
+                title="sell",
+                detail="sell",
+                previous_value=10,
+                current_value=20,
+                absolute_change=10,
+                change_rate=1,
+            ),
+        ]
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/monitor")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    signals = {row["market_hash_name"]: row["decision_signal"] for row in response.json()}
+    assert signals["buy-signal"]["action"] == "买入"
+    assert signals["sell-signal"]["action"] == "卖出"
+    assert signals["watch-signal"]["action"] == "观望"
+    assert signals["watch-signal"]["reason"] == "数据可信度偏低"
 
 
 def test_opportunities_sort_by_quality_adjusted_score(db_session):

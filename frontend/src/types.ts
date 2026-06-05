@@ -18,6 +18,12 @@ export type SourceQuality = {
   level: "trusted" | "partial" | "fallback";
 };
 
+export type DecisionSignal = {
+  action: "买入" | "持有" | "卖出" | "观望";
+  confidence: number;
+  reason: string;
+};
+
 export type Alert = {
   id: number;
   item_id: number;
@@ -165,6 +171,7 @@ export type MonitorItem = {
   latest_snapshot: Snapshot | null;
   latest_alert: Alert | null;
   source_quality: SourceQuality | null;
+  decision_signal: DecisionSignal;
 };
 
 export type ItemDetail = MonitorItem & {

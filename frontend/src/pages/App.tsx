@@ -705,6 +705,7 @@ function MonitorView({
             <tr>
               <th>饰品</th>
               <SortableHead label="状态" active={sortKey === "activity"} direction={sortDirection} onClick={() => changeSort("activity")} />
+              <th>信号</th>
               <th>可信度</th>
               <SortableHead label="底价" active={sortKey === "price"} direction={sortDirection} onClick={() => changeSort("price")} />
               <SortableHead label="在售" active={sortKey === "sell"} direction={sortDirection} onClick={() => changeSort("sell")} />
@@ -724,6 +725,12 @@ function MonitorView({
                   <span>{item.market_hash_name}</span>
                 </td>
                 <td><span className="tag">{item.status}</span></td>
+                <td>
+                  <span className={`signal-tag ${signalClass(item.decision_signal.action)}`}>
+                    {item.decision_signal.action}
+                  </span>
+                  <span>{item.decision_signal.confidence}</span>
+                </td>
                 <td><span className={`quality-tag ${item.source_quality?.level ?? "unknown"}`}>{qualityText(item)}</span></td>
                 <td>¥{item.latest_snapshot?.lowest_price.toFixed(2) ?? "-"}</td>
                 <td>{item.latest_snapshot?.sell_count ?? "-"}</td>
@@ -803,7 +810,8 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
           <h2>{detail.display_name}</h2>
           <p>{detail.market_hash_name}</p>
         </div>
-        <Metric label="状态" value={detail.status} />
+        <Metric label="参考信号" value={`${detail.decision_signal.action} ${detail.decision_signal.confidence}`} tone={signalTone(detail.decision_signal.action)} />
+        <Metric label="信号依据" value={detail.decision_signal.reason} />
         <Metric label="买入分" value={scoreLabel(detail.adjusted_buy_score, detail.buy_score)} tone="up" />
         <Metric label="卖出分" value={scoreLabel(detail.adjusted_sell_score, detail.sell_score)} tone="down" />
         <Metric label="最新底价" value={`¥${latest?.lowest_price.toFixed(2) ?? "-"}`} />
@@ -943,7 +951,10 @@ function OpportunityCard({
       }}
     >
       <strong>{item.display_name}</strong>
-      <span>{item.status}</span>
+      <span>
+        <span className={`signal-tag ${signalClass(item.decision_signal.action)}`}>{item.decision_signal.action}</span>
+        {item.status}
+      </span>
       <div>
         <Metric label="买入" value={String(item.adjusted_buy_score)} tone="up" />
         <Metric label="卖出" value={String(item.adjusted_sell_score)} tone="down" />
@@ -1310,6 +1321,29 @@ function qualityLevelText(level: string) {
     return "部分补位";
   }
   return "补位";
+}
+
+function signalClass(action: string) {
+  if (action === "买入") {
+    return "buy";
+  }
+  if (action === "卖出") {
+    return "sell";
+  }
+  if (action === "持有") {
+    return "hold";
+  }
+  return "watch";
+}
+
+function signalTone(action: string) {
+  if (action === "买入") {
+    return "up";
+  }
+  if (action === "卖出") {
+    return "down";
+  }
+  return "neutral";
 }
 
 function scoreLabel(adjusted: number, raw: number) {

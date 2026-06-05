@@ -30,6 +30,12 @@ class SourceQualityOut(BaseModel):
     level: str
 
 
+class DecisionSignalOut(BaseModel):
+    action: str
+    confidence: int
+    reason: str
+
+
 class AlertOut(BaseModel):
     id: int
     item_id: int
@@ -246,6 +252,7 @@ class MonitorItemOut(BaseModel):
     latest_snapshot: SnapshotOut | None
     latest_alert: AlertOut | None
     source_quality: SourceQualityOut | None
+    decision_signal: DecisionSignalOut
 
 
 class ItemDetailOut(BaseModel):
@@ -266,6 +273,7 @@ class ItemDetailOut(BaseModel):
     heatmap: list[HeatmapBucketOut]
     alert_summary: list[AlertSummaryOut]
     source_quality: SourceQualityOut | None
+    decision_signal: DecisionSignalOut
 
 
 class HealthOut(BaseModel):

@@ -11,6 +11,7 @@ from app.schemas.market import (
     BacktestResultOut,
     BacktestSummaryOut,
     CollectRunLogOut,
+    DecisionSignalOut,
     AlertSummaryOut,
     HeatmapBucketOut,
     HealthOut,
@@ -35,7 +36,7 @@ from app.schemas.market import (
 from app.services.market_service import MarketService
 from app.services.backtest_service import BacktestService
 from app.services.push_service import PushService
-from app.services.score_service import score_from_snapshot, status_from_alert
+from app.services.score_service import decision_from_scores, score_from_snapshot, status_from_alert
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
@@ -110,6 +111,8 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
     adjusted_buy_score, adjusted_sell_score, quality_penalty = _quality_adjusted_scores(
         buy_score, sell_score, source_quality, config.quality_penalty_max
     )
+    status = status_from_alert(latest_alert)
+    decision_signal = _decision_signal(latest_snapshot, status, adjusted_buy_score, adjusted_sell_score, source_quality)
     return ItemDetailOut(
         id=item.id,
         display_name=item.display_name,
@@ -117,7 +120,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         exterior=item.exterior,
         category=item.category,
         steam_item_nameid=item.steam_item_nameid,
-        status=status_from_alert(latest_alert),
+        status=status,
         buy_score=buy_score,
         sell_score=sell_score,
         adjusted_buy_score=adjusted_buy_score,
@@ -128,6 +131,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         heatmap=_heatmap(list(reversed(snapshots))),
         alert_summary=_alert_summary(alerts),
         source_quality=source_quality,
+        decision_signal=decision_signal,
     )
 
 
@@ -425,6 +429,8 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
     adjusted_buy_score, adjusted_sell_score, quality_penalty = _quality_adjusted_scores(
         buy_score, sell_score, source_quality, config.quality_penalty_max
     )
+    status = status_from_alert(latest_alert)
+    decision_signal = _decision_signal(latest_snapshot, status, adjusted_buy_score, adjusted_sell_score, source_quality)
     return MonitorItemOut(
         id=item.id,
         display_name=item.display_name,
@@ -433,7 +439,7 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
         category=item.category,
         steam_item_nameid=item.steam_item_nameid,
         pool_name=item.pool.name if item.pool else None,
-        status=status_from_alert(latest_alert),
+        status=status,
         buy_score=buy_score,
         sell_score=sell_score,
         adjusted_buy_score=adjusted_buy_score,
@@ -442,6 +448,7 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
         latest_snapshot=SnapshotOut.model_validate(latest_snapshot) if latest_snapshot else None,
         latest_alert=_alert_out(latest_alert) if latest_alert else None,
         source_quality=source_quality,
+        decision_signal=decision_signal,
     )
 
 
@@ -594,6 +601,23 @@ def _quality_adjusted_scores(
         return max(0, buy_score - penalty), max(0, sell_score - penalty), penalty
     penalty = round((1 - source_quality.real_ratio) * max_penalty)
     return max(0, buy_score - penalty), max(0, sell_score - penalty), penalty
+
+
+def _decision_signal(
+    snapshot: MarketSnapshot | None,
+    status: str,
+    adjusted_buy_score: int,
+    adjusted_sell_score: int,
+    source_quality: SourceQualityOut | None,
+) -> DecisionSignalOut:
+    signal = decision_from_scores(
+        snapshot,
+        status,
+        adjusted_buy_score,
+        adjusted_sell_score,
+        source_quality.real_ratio if source_quality else None,
+    )
+    return DecisionSignalOut(**signal)
 
 
 def _ensure_pool(db: Session, pool_id: int | None) -> None:

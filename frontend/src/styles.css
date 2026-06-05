@@ -234,7 +234,8 @@ tbody tr.selected {
 
 .tag,
 .severity,
-.quality-tag {
+.quality-tag,
+.signal-tag {
   display: inline-flex;
   align-items: center;
   height: 24px;
@@ -243,6 +244,31 @@ tbody tr.selected {
   background: #1a2431;
   color: #c7d2e2;
   font-size: 12px;
+}
+
+.signal-tag {
+  width: 48px;
+  justify-content: center;
+}
+
+.signal-tag.buy {
+  background: #17352d;
+  color: #78e1b1;
+}
+
+.signal-tag.sell {
+  background: #4b2b20;
+  color: #ffb28b;
+}
+
+.signal-tag.hold {
+  background: #25374c;
+  color: #9dc7ff;
+}
+
+.signal-tag.watch {
+  background: #262a31;
+  color: #9ba3af;
 }
 
 .quality-tag.trusted {
@@ -289,7 +315,7 @@ tbody tr.selected {
 
 .summary {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) repeat(4, minmax(120px, 160px));
+  grid-template-columns: minmax(240px, 1fr) repeat(5, minmax(112px, 150px));
   gap: 12px;
   align-items: center;
 }
