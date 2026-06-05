@@ -475,6 +475,36 @@ tbody tr.selected {
   background: #0d131c;
 }
 
+.timeline {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-row {
+  display: grid;
+  grid-template-columns: 120px minmax(180px, 1fr) 120px 140px;
+  gap: 12px;
+  align-items: center;
+  border-left: 2px solid #2a86c9;
+  border-bottom: 1px solid #1d2530;
+  padding: 10px 0 10px 12px;
+}
+
+.timeline-row time {
+  color: #8491a5;
+  font-size: 13px;
+}
+
+.timeline-row strong,
+.timeline-row span {
+  display: block;
+}
+
+.timeline-row span {
+  color: #a8b4c5;
+  font-size: 12px;
+}
+
 .alert-head,
 .alert-meta {
   display: flex;
@@ -849,6 +879,10 @@ tbody tr.selected {
 
   .pool-form,
   .pool-card {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-row {
     grid-template-columns: 1fr;
   }
 

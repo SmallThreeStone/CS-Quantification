@@ -854,6 +854,10 @@ function DetailView({ detail }: { detail: ItemDetail | null }) {
         <AlertSummaryView detail={detail} />
       </section>
       <section className="panel wide">
+        <h3>历史告警时间线</h3>
+        <AlertTimeline alerts={detail.alerts} />
+      </section>
+      <section className="panel wide">
         <h3>历史告警</h3>
         <AlertList alerts={detail.alerts} />
       </section>
@@ -882,6 +886,29 @@ function HeatmapView({ detail }: { detail: ItemDetail }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function AlertTimeline({ alerts }: { alerts: Alert[] }) {
+  if (!alerts.length) {
+    return <div className="empty-chart">暂无告警时间线</div>;
+  }
+  return (
+    <div className="timeline">
+      {alerts.map((alert) => (
+        <div className="timeline-row" key={alert.id}>
+          <time>{formatTime(alert.created_at)}</time>
+          <div>
+            <strong>{alert.alert_type}</strong>
+            <span>{alert.direction}</span>
+          </div>
+          <div className={alert.absolute_change >= 0 ? "up" : "down"}>
+            {alert.previous_value.toFixed(0)}→{alert.current_value.toFixed(0)}
+          </div>
+          <span>{formatChange(alert.absolute_change)} / {formatPercent(alert.change_rate)}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1289,6 +1316,10 @@ function formatHorizon(minutes: number) {
 
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatChange(value: number) {
+  return `${value >= 0 ? "+" : ""}${value.toFixed(0)}`;
 }
 
 function formatTime(value: string) {
