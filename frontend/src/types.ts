@@ -37,6 +37,16 @@ export type CategoryStrategy = {
   reason: string;
 };
 
+export type BacktestSignal = {
+  alert_type: string;
+  horizon_minutes: number;
+  sample_count: number;
+  win_rate: number;
+  avg_change_rate: number;
+  score_adjustment: number;
+  reason: string;
+};
+
 export type Alert = {
   id: number;
   item_id: number;
@@ -192,6 +202,7 @@ export type MonitorItem = {
   latest_alert: Alert | null;
   source_quality: SourceQuality | null;
   category_strategy: CategoryStrategy;
+  backtest_signal: BacktestSignal;
   decision_signal: DecisionSignal;
 };
 

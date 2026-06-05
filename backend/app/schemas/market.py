@@ -47,6 +47,16 @@ class CategoryStrategyOut(BaseModel):
     reason: str
 
 
+class BacktestSignalOut(BaseModel):
+    alert_type: str
+    horizon_minutes: int
+    sample_count: int
+    win_rate: float
+    avg_change_rate: float
+    score_adjustment: int
+    reason: str
+
+
 class AlertOut(BaseModel):
     id: int
     item_id: int
@@ -274,6 +284,7 @@ class MonitorItemOut(BaseModel):
     latest_alert: AlertOut | None
     source_quality: SourceQualityOut | None
     category_strategy: CategoryStrategyOut
+    backtest_signal: BacktestSignalOut
     decision_signal: DecisionSignalOut
 
 
@@ -296,6 +307,7 @@ class ItemDetailOut(BaseModel):
     alert_summary: list[AlertSummaryOut]
     source_quality: SourceQualityOut | None
     category_strategy: CategoryStrategyOut
+    backtest_signal: BacktestSignalOut
     decision_signal: DecisionSignalOut
 
 

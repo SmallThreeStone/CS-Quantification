@@ -1018,6 +1018,8 @@ function OpportunityCard({
       <div>
         <Metric label="买入" value={String(item.adjusted_buy_score)} tone="up" />
         <Metric label="卖出" value={String(item.adjusted_sell_score)} tone="down" />
+        <Metric label="回测胜率" value={backtestSignalText(item)} tone={item.backtest_signal.score_adjustment >= 0 ? "up" : "down"} />
+        <Metric label="排序修正" value={formatChange(item.backtest_signal.score_adjustment)} />
       </div>
     </button>
   );
@@ -1045,8 +1047,12 @@ function opportunityGroups(items: MonitorItem[]) {
 
 function sortOpportunities(items: MonitorItem[]) {
   return [...items].sort(
-    (a, b) => Math.max(b.adjusted_buy_score, b.adjusted_sell_score) - Math.max(a.adjusted_buy_score, a.adjusted_sell_score)
+    (a, b) => opportunityRankScore(b) - opportunityRankScore(a)
   );
+}
+
+function opportunityRankScore(item: MonitorItem) {
+  return Math.max(item.adjusted_buy_score, item.adjusted_sell_score) + item.backtest_signal.score_adjustment;
 }
 
 function SettingsView({
@@ -1371,6 +1377,13 @@ function formatChange(value: number) {
 
 function strategyAdjustmentText(buy: number, sell: number) {
   return `买 ${formatChange(buy)} / 卖 ${formatChange(sell)}`;
+}
+
+function backtestSignalText(item: MonitorItem) {
+  if (!item.backtest_signal.sample_count) {
+    return "暂无";
+  }
+  return `${formatPercent(item.backtest_signal.win_rate)} / ${item.backtest_signal.sample_count}`;
 }
 
 function formatTime(value: string) {

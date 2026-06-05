@@ -9,6 +9,7 @@ from app.models import StrategyConfig
 from app.schemas.market import (
     AlertOut,
     BacktestResultOut,
+    BacktestSignalOut,
     BacktestSummaryOut,
     CollectRunLogOut,
     DecisionSignalOut,
@@ -116,6 +117,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
     adjusted_buy_score, adjusted_sell_score = _category_adjusted_scores(
         adjusted_buy_score, adjusted_sell_score, category_strategy
     )
+    backtest_signal = _backtest_signal(db, latest_alert)
     status = status_from_alert(latest_alert)
     decision_signal = _decision_signal(latest_snapshot, status, adjusted_buy_score, adjusted_sell_score, source_quality)
     return ItemDetailOut(
@@ -137,6 +139,7 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
         alert_summary=_alert_summary(alerts),
         source_quality=source_quality,
         category_strategy=category_strategy,
+        backtest_signal=backtest_signal,
         decision_signal=decision_signal,
     )
 
@@ -422,7 +425,7 @@ def update_strategy(payload: StrategyConfigUpdate, db: Session = Depends(get_db)
 def opportunities(db: Session = Depends(get_db)) -> list[MonitorItemOut]:
     config = _default_strategy(db)
     items = [_monitor_item(db, item, config) for item in db.query(Item).filter_by(is_active=True).all()]
-    return sorted(items, key=lambda row: max(row.adjusted_buy_score, row.adjusted_sell_score), reverse=True)
+    return sorted(items, key=_opportunity_rank_score, reverse=True)
 
 
 def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorItemOut:
@@ -442,6 +445,7 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
     adjusted_buy_score, adjusted_sell_score = _category_adjusted_scores(
         adjusted_buy_score, adjusted_sell_score, category_strategy
     )
+    backtest_signal = _backtest_signal(db, latest_alert)
     status = status_from_alert(latest_alert)
     decision_signal = _decision_signal(latest_snapshot, status, adjusted_buy_score, adjusted_sell_score, source_quality)
     return MonitorItemOut(
@@ -462,8 +466,13 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
         latest_alert=_alert_out(latest_alert) if latest_alert else None,
         source_quality=source_quality,
         category_strategy=category_strategy,
+        backtest_signal=backtest_signal,
         decision_signal=decision_signal,
     )
+
+
+def _opportunity_rank_score(row: MonitorItemOut) -> int:
+    return max(row.adjusted_buy_score, row.adjusted_sell_score) + row.backtest_signal.score_adjustment
 
 
 def _alert_out(alert: Alert) -> AlertOut:
@@ -691,6 +700,72 @@ def _category_adjusted_scores(
         max(0, min(100, buy_score + category_strategy.buy_adjustment)),
         max(0, min(100, sell_score + category_strategy.sell_adjustment)),
     )
+
+
+def _backtest_signal(db: Session, alert: Alert | None) -> BacktestSignalOut:
+    if alert is None:
+        return BacktestSignalOut(
+            alert_type="",
+            horizon_minutes=60,
+            sample_count=0,
+            win_rate=0,
+            avg_change_rate=0,
+            score_adjustment=0,
+            reason="暂无告警，无法匹配回测样本",
+        )
+    row = (
+        db.query(BacktestResult)
+        .join(Alert, BacktestResult.alert_id == Alert.id)
+        .filter(Alert.alert_type == alert.alert_type, BacktestResult.horizon_minutes == 60)
+        .all()
+    )
+    if not row:
+        return BacktestSignalOut(
+            alert_type=alert.alert_type,
+            horizon_minutes=60,
+            sample_count=0,
+            win_rate=0,
+            avg_change_rate=0,
+            score_adjustment=0,
+            reason="暂无同类 60 分钟回测样本",
+        )
+    wins = sum(1 for result in row if _backtest_is_win(result))
+    win_rate = wins / len(row)
+    avg_change_rate = sum(result.change_rate for result in row) / len(row)
+    score_adjustment = _backtest_score_adjustment(len(row), win_rate, avg_change_rate)
+    return BacktestSignalOut(
+        alert_type=alert.alert_type,
+        horizon_minutes=60,
+        sample_count=len(row),
+        win_rate=win_rate,
+        avg_change_rate=avg_change_rate,
+        score_adjustment=score_adjustment,
+        reason=f"同类 60 分钟回测 {len(row)} 条，胜率 {win_rate * 100:.1f}%",
+    )
+
+
+def _backtest_score_adjustment(sample_count: int, win_rate: float, avg_change_rate: float) -> int:
+    if sample_count < 3:
+        return 0
+    adjustment = 0
+    if win_rate >= 0.65:
+        adjustment += 6
+    elif win_rate <= 0.35:
+        adjustment -= 6
+    if avg_change_rate >= 0.03:
+        adjustment += 4
+    elif avg_change_rate <= -0.03:
+        adjustment -= 4
+    return adjustment
+
+
+def _backtest_is_win(result: BacktestResult) -> bool:
+    direction = result.alert.direction
+    if direction in ("偏买入机会", "偏扫货拉升"):
+        return result.price_change > 0
+    if direction == "偏卖压风险":
+        return result.price_change < 0
+    return False
 
 
 def _decision_signal(

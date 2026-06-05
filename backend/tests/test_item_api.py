@@ -1,10 +1,10 @@
 from fastapi.testclient import TestClient
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 from app.database import get_db
 from app.main import app
-from app.models import Alert, Item, MarketSnapshot, MonitorPool, Platform
+from app.models import Alert, BacktestResult, Item, MarketSnapshot, MonitorPool, Platform
 from tests.test_strategy_api import override_session
 
 
@@ -528,6 +528,75 @@ def test_opportunities_sort_by_quality_adjusted_score(db_session):
     app.dependency_overrides.clear()
     assert response.status_code == 200
     assert response.json()[0]["display_name"] == "Trusted"
+
+
+def test_opportunities_include_backtest_signal_in_rank(db_session):
+    platform = Platform(code="steam", name="Steam")
+    strong_history = Item(market_hash_name="strong-history", display_name="Strong History")
+    weak_history = Item(market_hash_name="weak-history", display_name="Weak History")
+    db_session.add_all([platform, strong_history, weak_history])
+    db_session.flush()
+    now = datetime.utcnow()
+    alerts = []
+    for item, alert_type in ((strong_history, "在售变化"), (weak_history, "求购变化")):
+        snapshot = MarketSnapshot(
+            item_id=item.id,
+            platform_id=platform.id,
+            lowest_price=100,
+            sell_count=10,
+            highest_buy_price=96,
+            buy_count=5,
+            volume_24h=4,
+            avg_price_24h=98,
+            captured_at=now,
+        )
+        db_session.add(snapshot)
+        db_session.flush()
+        alert = Alert(
+            item_id=item.id,
+            platform_id=platform.id,
+            snapshot_id=snapshot.id,
+            alert_type=alert_type,
+            direction="偏买入机会",
+            title=item.display_name,
+            detail=item.display_name,
+            previous_value=20,
+            current_value=10,
+            absolute_change=-10,
+            change_rate=-0.5,
+            created_at=now,
+        )
+        db_session.add(alert)
+        alerts.append(alert)
+    db_session.flush()
+    strong_alert = alerts[0]
+    for index in range(3):
+        db_session.add(
+            BacktestResult(
+                alert_id=strong_alert.id,
+                item_id=strong_history.id,
+                platform_id=platform.id,
+                horizon_minutes=60,
+                entry_price=100,
+                exit_price=110 + index,
+                price_change=10 + index,
+                change_rate=0.1 + index * 0.01,
+                evaluated_at=now + timedelta(minutes=60),
+            )
+        )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/opportunities")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["display_name"] == "Strong History"
+    assert body[0]["backtest_signal"]["sample_count"] == 3
+    assert body[0]["backtest_signal"]["score_adjustment"] == 10
+    assert body[1]["backtest_signal"]["sample_count"] == 0
 
 
 def test_discover_item_steam_nameid_updates_item(db_session, monkeypatch):
