@@ -57,9 +57,20 @@ export type ManagedItem = {
   exterior: string;
   category: string;
   is_active: boolean;
+  pool_id: number | null;
+  pool_name: string | null;
 };
 
-export type ManagedItemInput = Omit<ManagedItem, "id">;
+export type ManagedItemInput = Omit<ManagedItem, "id" | "pool_name">;
+
+export type MonitorPool = {
+  id: number;
+  name: string;
+  interval_minutes: number;
+  description: string;
+  last_collected_at: string | null;
+  active_item_count: number;
+};
 
 export type MonitorItem = {
   id: number;
@@ -67,6 +78,7 @@ export type MonitorItem = {
   market_hash_name: string;
   exterior: string;
   category: string;
+  pool_name: string | null;
   status: string;
   buy_score: number;
   sell_score: number;

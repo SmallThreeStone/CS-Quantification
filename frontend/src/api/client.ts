@@ -3,6 +3,7 @@ import type {
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
+  MonitorPool,
   MonitorItem,
   PushRecord,
   StrategyConfig,
@@ -26,6 +27,7 @@ export const api = {
   alerts: () => request<Alert[]>("/api/alerts"),
   pushRecords: () => request<PushRecord[]>("/api/push-records"),
   items: () => request<ManagedItem[]>("/api/items"),
+  monitorPools: () => request<MonitorPool[]>("/api/monitor-pools"),
   createItem: (payload: ManagedItemInput) =>
     request<ManagedItem>("/api/items", {
       method: "POST",

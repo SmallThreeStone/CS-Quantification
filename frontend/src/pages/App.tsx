@@ -10,6 +10,7 @@ import type {
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
+  MonitorPool,
   MonitorItem,
   PushRecord,
   StrategyConfig,
@@ -22,6 +23,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("monitor");
   const [items, setItems] = useState<MonitorItem[]>([]);
   const [managedItems, setManagedItems] = useState<ManagedItem[]>([]);
+  const [pools, setPools] = useState<MonitorPool[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [strategy, setStrategy] = useState<StrategyConfig | null>(null);
@@ -33,15 +35,17 @@ export default function App() {
   async function refresh() {
     setLoading(true);
     try {
-      const [nextItems, nextManagedItems, nextAlerts, nextPushRecords, nextStrategy] = await Promise.all([
+      const [nextItems, nextManagedItems, nextPools, nextAlerts, nextPushRecords, nextStrategy] = await Promise.all([
         api.monitor(),
         api.items(),
+        api.monitorPools(),
         api.alerts(),
         api.pushRecords(),
         api.strategy()
       ]);
       setItems(nextItems);
       setManagedItems(nextManagedItems);
+      setPools(nextPools);
       setAlerts(nextAlerts);
       setPushRecords(nextPushRecords);
       setStrategy(nextStrategy);
@@ -129,9 +133,9 @@ export default function App() {
         {tab === "detail" && <DetailView detail={detail} />}
         {tab === "alerts" && <AlertList alerts={alerts} />}
         {tab === "opportunities" && <OpportunityView items={items} onSelect={setSelectedId} setTab={setTab} />}
-        {tab === "items" && <ItemManager items={managedItems} onChanged={refresh} />}
+        {tab === "items" && <ItemManager items={managedItems} pools={pools} onChanged={refresh} />}
         {tab === "settings" && <SettingsView strategy={strategy} onSaved={setStrategy} />}
-        {tab === "source" && <SourceView items={items} alerts={alerts} pushRecords={pushRecords} />}
+        {tab === "source" && <SourceView items={items} pools={pools} alerts={alerts} pushRecords={pushRecords} />}
       </main>
     </div>
   );
@@ -142,10 +146,19 @@ const emptyItem: ManagedItemInput = {
   display_name: "",
   exterior: "",
   category: "",
-  is_active: true
+  is_active: true,
+  pool_id: null
 };
 
-function ItemManager({ items, onChanged }: { items: ManagedItem[]; onChanged: () => Promise<void> }) {
+function ItemManager({
+  items,
+  pools,
+  onChanged
+}: {
+  items: ManagedItem[];
+  pools: MonitorPool[];
+  onChanged: () => Promise<void>;
+}) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ManagedItemInput>(emptyItem);
   const [saving, setSaving] = useState(false);
@@ -157,7 +170,8 @@ function ItemManager({ items, onChanged }: { items: ManagedItem[]; onChanged: ()
       display_name: item.display_name,
       exterior: item.exterior,
       category: item.category,
-      is_active: item.is_active
+      is_active: item.is_active,
+      pool_id: item.pool_id
     });
   }
 
@@ -204,6 +218,20 @@ function ItemManager({ items, onChanged }: { items: ManagedItem[]; onChanged: ()
           <span>分类</span>
           <input value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
         </label>
+        <label className="field">
+          <span>监控池</span>
+          <select
+            value={form.pool_id ?? ""}
+            onChange={(event) => setForm({ ...form, pool_id: event.target.value ? Number(event.target.value) : null })}
+          >
+            <option value="">未分组</option>
+            {pools.map((pool) => (
+              <option key={pool.id} value={pool.id}>
+                {pool.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="check-field">
           <input
             type="checkbox"
@@ -224,6 +252,7 @@ function ItemManager({ items, onChanged }: { items: ManagedItem[]; onChanged: ()
               <th>饰品</th>
               <th>品质</th>
               <th>分类</th>
+              <th>监控池</th>
               <th>状态</th>
               <th>操作</th>
             </tr>
@@ -237,6 +266,7 @@ function ItemManager({ items, onChanged }: { items: ManagedItem[]; onChanged: ()
                 </td>
                 <td>{item.exterior || "-"}</td>
                 <td>{item.category || "-"}</td>
+                <td>{item.pool_name || "未分组"}</td>
                 <td><span className="tag">{item.is_active ? "监控中" : "已停用"}</span></td>
                 <td>
                   <div className="row-actions">
@@ -275,6 +305,7 @@ function MonitorView({
               <th>最高求购</th>
               <th>求购</th>
               <th>24h 成交</th>
+              <th>池</th>
               <th>买入分</th>
               <th>卖出分</th>
             </tr>
@@ -292,6 +323,7 @@ function MonitorView({
                 <td>¥{item.latest_snapshot?.highest_buy_price.toFixed(2) ?? "-"}</td>
                 <td>{item.latest_snapshot?.buy_count ?? "-"}</td>
                 <td>{item.latest_snapshot?.volume_24h ?? "-"}</td>
+                <td>{item.pool_name ?? "未分组"}</td>
                 <td>{item.buy_score}</td>
                 <td>{item.sell_score}</td>
               </tr>
@@ -512,10 +544,12 @@ function fromPercent(value: number) {
 
 function SourceView({
   items,
+  pools,
   alerts,
   pushRecords
 }: {
   items: MonitorItem[];
+  pools: MonitorPool[];
   alerts: Alert[];
   pushRecords: PushRecord[];
 }) {
@@ -528,10 +562,22 @@ function SourceView({
         <Metric label="API 状态" value="在线" tone="up" />
         <Metric label="行情来源" value="Mock / Steam 适配层" />
         <Metric label="监控饰品" value={`${items.length} 个`} />
+        <Metric label="监控池" value={`${pools.length} 个`} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="最近告警" value={`${alerts.length} 条`} />
         <Metric label="最近推送" value={latestPush ? `${latestPush.channel}:${latestPush.status}` : "暂无"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>监控池</h3>
+        {pools.map((pool) => (
+          <div className="push-row" key={pool.id}>
+            <span>{pool.name}</span>
+            <strong>{pool.interval_minutes} 分钟</strong>
+            <span>{pool.active_item_count} 个饰品</span>
+            <span>{pool.last_collected_at ? new Date(pool.last_collected_at).toLocaleString() : "待采集"}</span>
+          </div>
+        ))}
       </div>
       <div className="push-table">
         <h3>推送记录</h3>

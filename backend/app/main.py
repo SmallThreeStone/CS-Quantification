@@ -4,11 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, SessionLocal, engine
 from app.routers.market import router
+from app.schema_bootstrap import ensure_runtime_columns
 from app.services.seed import seed_defaults
 
 
 def create_app() -> FastAPI:
     Base.metadata.create_all(bind=engine)
+    ensure_runtime_columns(engine)
     db = SessionLocal()
     try:
         seed_defaults(db)

@@ -74,6 +74,8 @@ class ItemOut(BaseModel):
     exterior: str
     category: str
     is_active: bool
+    pool_id: int | None
+    pool_name: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -84,6 +86,7 @@ class ItemCreate(BaseModel):
     exterior: str = Field(default="", max_length=80)
     category: str = Field(default="", max_length=80)
     is_active: bool = True
+    pool_id: int | None = None
 
 
 class ItemUpdate(BaseModel):
@@ -92,6 +95,16 @@ class ItemUpdate(BaseModel):
     exterior: str = Field(default="", max_length=80)
     category: str = Field(default="", max_length=80)
     is_active: bool = True
+    pool_id: int | None = None
+
+
+class MonitorPoolOut(BaseModel):
+    id: int
+    name: str
+    interval_minutes: int
+    description: str
+    last_collected_at: datetime | None
+    active_item_count: int
 
 
 class MonitorItemOut(BaseModel):
@@ -100,6 +113,7 @@ class MonitorItemOut(BaseModel):
     market_hash_name: str
     exterior: str
     category: str
+    pool_name: str | None
     status: str
     buy_score: int
     sell_score: int

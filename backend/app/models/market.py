@@ -23,8 +23,10 @@ class Item(Base):
     exterior: Mapped[str] = mapped_column(String(80), default="")
     category: Mapped[str] = mapped_column(String(80), default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    pool_id: Mapped[int | None] = mapped_column(ForeignKey("monitor_pools.id"), nullable=True, index=True)
 
     snapshots: Mapped[list["MarketSnapshot"]] = relationship(back_populates="item")
+    pool: Mapped["MonitorPool | None"] = relationship(back_populates="items")
 
 
 class MonitorPool(Base):
@@ -34,6 +36,9 @@ class MonitorPool(Base):
     name: Mapped[str] = mapped_column(String(80), unique=True)
     interval_minutes: Mapped[int] = mapped_column(Integer, default=10)
     description: Mapped[str] = mapped_column(String(240), default="")
+    last_collected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    items: Mapped[list[Item]] = relationship(back_populates="pool")
 
 
 class MarketSnapshot(Base):

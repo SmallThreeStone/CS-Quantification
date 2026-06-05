@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Alert, Item, MarketSnapshot, Platform, PushRecord
+from app.models import Alert, Item, MarketSnapshot, MonitorPool, Platform, PushRecord
 from app.models import StrategyConfig
 from app.schemas.market import (
     AlertOut,
@@ -11,6 +11,7 @@ from app.schemas.market import (
     ItemDetailOut,
     ItemOut,
     ItemUpdate,
+    MonitorPoolOut,
     MonitorItemOut,
     PushRecordOut,
     SnapshotOut,
@@ -43,26 +44,29 @@ def monitor(db: Session = Depends(get_db)) -> list[MonitorItemOut]:
 
 
 @router.get("/items", response_model=list[ItemOut])
-def item_list(db: Session = Depends(get_db)) -> list[Item]:
-    return db.query(Item).order_by(Item.is_active.desc(), Item.display_name.asc()).all()
+def item_list(db: Session = Depends(get_db)) -> list[ItemOut]:
+    items = db.query(Item).order_by(Item.is_active.desc(), Item.display_name.asc()).all()
+    return [_item_out(item) for item in items]
 
 
 @router.post("/items", response_model=ItemOut)
-def create_item(payload: ItemCreate, db: Session = Depends(get_db)) -> Item:
+def create_item(payload: ItemCreate, db: Session = Depends(get_db)) -> ItemOut:
     existing = db.query(Item).filter_by(market_hash_name=payload.market_hash_name).first()
     if existing is not None:
         raise HTTPException(status_code=409, detail="item already exists")
+    _ensure_pool(db, payload.pool_id)
     item = Item(
         market_hash_name=payload.market_hash_name,
         display_name=payload.display_name,
         exterior=payload.exterior,
         category=payload.category,
         is_active=payload.is_active,
+        pool_id=payload.pool_id,
     )
     db.add(item)
     db.commit()
     db.refresh(item)
-    return item
+    return _item_out(item)
 
 
 @router.get("/items/{item_id}", response_model=ItemDetailOut)
@@ -96,32 +100,50 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
 
 
 @router.put("/items/{item_id}", response_model=ItemOut)
-def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)) -> Item:
+def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)) -> ItemOut:
     item = db.get(Item, item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="item not found")
     duplicate = db.query(Item).filter(Item.market_hash_name == payload.market_hash_name, Item.id != item_id).first()
     if duplicate is not None:
         raise HTTPException(status_code=409, detail="item already exists")
+    _ensure_pool(db, payload.pool_id)
     item.market_hash_name = payload.market_hash_name
     item.display_name = payload.display_name
     item.exterior = payload.exterior
     item.category = payload.category
     item.is_active = payload.is_active
+    item.pool_id = payload.pool_id
     db.commit()
     db.refresh(item)
-    return item
+    return _item_out(item)
 
 
 @router.patch("/items/{item_id}/active", response_model=ItemOut)
-def set_item_active(item_id: int, is_active: bool, db: Session = Depends(get_db)) -> Item:
+def set_item_active(item_id: int, is_active: bool, db: Session = Depends(get_db)) -> ItemOut:
     item = db.get(Item, item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="item not found")
     item.is_active = is_active
     db.commit()
     db.refresh(item)
-    return item
+    return _item_out(item)
+
+
+@router.get("/monitor-pools", response_model=list[MonitorPoolOut])
+def monitor_pools(db: Session = Depends(get_db)) -> list[MonitorPoolOut]:
+    pools = db.query(MonitorPool).order_by(MonitorPool.interval_minutes.asc()).all()
+    return [
+        MonitorPoolOut(
+            id=pool.id,
+            name=pool.name,
+            interval_minutes=pool.interval_minutes,
+            description=pool.description,
+            last_collected_at=pool.last_collected_at,
+            active_item_count=sum(1 for item in pool.items if item.is_active),
+        )
+        for pool in pools
+    ]
 
 
 @router.get("/alerts", response_model=list[AlertOut])
@@ -174,6 +196,7 @@ def _monitor_item(db: Session, item: Item) -> MonitorItemOut:
         market_hash_name=item.market_hash_name,
         exterior=item.exterior,
         category=item.category,
+        pool_name=item.pool.name if item.pool else None,
         status=status_from_alert(latest_alert),
         buy_score=buy_score,
         sell_score=sell_score,
@@ -201,6 +224,24 @@ def _alert_out(alert: Alert) -> AlertOut:
         item_name=alert.item.display_name,
         platform_name=platform.name,
     )
+
+
+def _item_out(item: Item) -> ItemOut:
+    return ItemOut(
+        id=item.id,
+        market_hash_name=item.market_hash_name,
+        display_name=item.display_name,
+        exterior=item.exterior,
+        category=item.category,
+        is_active=item.is_active,
+        pool_id=item.pool_id,
+        pool_name=item.pool.name if item.pool else None,
+    )
+
+
+def _ensure_pool(db: Session, pool_id: int | None) -> None:
+    if pool_id is not None and db.get(MonitorPool, pool_id) is None:
+        raise HTTPException(status_code=404, detail="monitor pool not found")
 
 
 def _default_strategy(db: Session) -> StrategyConfig:

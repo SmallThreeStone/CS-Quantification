@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.4 — 饰品管理与监控启停
+V0.1.5 — 监控池分组与到期采集
 
 ## 功能范围
 
@@ -16,6 +16,7 @@ V0.1.4 — 饰品管理与监控启停
 - 机会榜：按买入分和卖出分排序
 - 策略配置：在售变化、求购变化、底价变化和冷却时间可调
 - 饰品管理：新增、编辑、停用、恢复监控饰品
+- 监控池：重点池、观察池、事件池分组，worker 按池间隔采集
 - 数据源状态：当前使用 Mock / Steam 适配层占位
 - Docker Compose：frontend、backend、worker、postgres、redis
 
@@ -63,6 +64,7 @@ docker compose up -d --build
 - `GET /api/items/{item_id}`
 - `PUT /api/items/{item_id}`
 - `PATCH /api/items/{item_id}/active`
+- `GET /api/monitor-pools`
 - `GET /api/alerts`
 - `GET /api/push-records`
 - `GET /api/strategy`
@@ -85,6 +87,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.5 — 增加监控池分组、饰品池归属、池状态接口和 worker 到期池采集。
 - V0.1.4 — 增加饰品管理 API 和前端管理页，支持新增、编辑、停用、恢复监控饰品。
 - V0.1.3 — 增加策略配置读取/更新 API，前端策略页支持编辑告警阈值和冷却时间。
 - V0.1.2 — 增加微信 / QQ Webhook 推送适配、推送记录表和站内推送状态展示。

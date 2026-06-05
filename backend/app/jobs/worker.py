@@ -10,7 +10,7 @@ def run_once() -> int:
     create_app()
     db = SessionLocal()
     try:
-        alerts = MarketService(db).collect_active_items()
+        alerts = MarketService(db).collect_due_pools()
         PushService(db).dispatch_alerts(alerts)
         return len(alerts)
     finally:
