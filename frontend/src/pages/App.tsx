@@ -288,6 +288,7 @@ function ItemManager({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ManagedItemInput>(emptyItem);
   const [saving, setSaving] = useState(false);
+  const [discoveringId, setDiscoveringId] = useState<number | null>(null);
 
   function edit(item: ManagedItem) {
     setEditingId(item.id);
@@ -321,6 +322,18 @@ function ItemManager({
   async function toggle(item: ManagedItem) {
     await api.setItemActive(item.id, !item.is_active);
     await onChanged();
+  }
+
+  async function discover(item: ManagedItem) {
+    setDiscoveringId(item.id);
+    try {
+      await api.discoverSteamNameId(item.id);
+      await onChanged();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Steam NameID 发现失败");
+    } finally {
+      setDiscoveringId(null);
+    }
   }
 
   return (
@@ -407,6 +420,9 @@ function ItemManager({
                 <td>
                   <div className="row-actions">
                     <button onClick={() => edit(item)}>编辑</button>
+                    <button onClick={() => discover(item)} disabled={discoveringId === item.id}>
+                      {discoveringId === item.id ? "发现中" : "发现ID"}
+                    </button>
                     <button onClick={() => toggle(item)}>{item.is_active ? "停用" : "恢复"}</button>
                   </div>
                 </td>

@@ -49,6 +49,11 @@ export const api = {
     }),
   setItemActive: (id: number, isActive: boolean) =>
     request<ManagedItem>(`/api/items/${id}/active?is_active=${isActive}`, { method: "PATCH" }),
+  discoverSteamNameId: (id: number) =>
+    request<{ item_id: number; market_hash_name: string; steam_item_nameid: string }>(
+      `/api/items/${id}/steam-nameid/discover`,
+      { method: "POST" }
+    ),
   strategy: () => request<StrategyConfig>("/api/strategy"),
   updateStrategy: (payload: StrategyConfigUpdate) =>
     request<StrategyConfig>("/api/strategy", {

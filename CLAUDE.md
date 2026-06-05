@@ -116,7 +116,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.13 — 饰品级 Steam NameID 管理
+V0.1.14 — Steam NameID 自动发现
 
 ## 环境要求
 

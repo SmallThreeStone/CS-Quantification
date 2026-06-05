@@ -16,6 +16,7 @@ from app.schemas.market import (
     ItemDetailOut,
     ItemOut,
     ItemUpdate,
+    SteamNameIdOut,
     MonitorPoolOut,
     MonitorItemOut,
     PushRecordOut,
@@ -27,6 +28,7 @@ from app.services.market_service import MarketService
 from app.services.backtest_service import BacktestService
 from app.services.push_service import PushService
 from app.services.score_service import score_from_snapshot, status_from_alert
+from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
 
@@ -141,6 +143,24 @@ def set_item_active(item_id: int, is_active: bool, db: Session = Depends(get_db)
     db.commit()
     db.refresh(item)
     return _item_out(item)
+
+
+@router.post("/items/{item_id}/steam-nameid/discover", response_model=SteamNameIdOut)
+def discover_item_steam_nameid(item_id: int, db: Session = Depends(get_db)) -> SteamNameIdOut:
+    item = db.get(Item, item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="item not found")
+    try:
+        item.steam_item_nameid = SteamNameIdService().discover(item.market_hash_name)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    db.commit()
+    db.refresh(item)
+    return SteamNameIdOut(
+        item_id=item.id,
+        market_hash_name=item.market_hash_name,
+        steam_item_nameid=item.steam_item_nameid,
+    )
 
 
 @router.get("/monitor-pools", response_model=list[MonitorPoolOut])

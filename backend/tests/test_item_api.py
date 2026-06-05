@@ -149,3 +149,37 @@ def test_item_detail_returns_heatmap_and_alert_summary(db_session):
     assert body["heatmap"][0]["max_sell_change"] == 15
     assert body["alert_summary"][0]["alert_type"] == "sell_count_change"
     assert len(body["alert_summary"][0]["recent_alerts"]) == 2
+
+
+def test_discover_item_steam_nameid_updates_item(db_session, monkeypatch):
+    item = Item(market_hash_name="AK-47 | Test", display_name="Test")
+    db_session.add(item)
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    monkeypatch.setattr("app.routers.market.SteamNameIdService.discover", lambda self, market_hash_name: "12345")
+
+    response = client.post(f"/api/items/{item.id}/steam-nameid/discover")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["steam_item_nameid"] == "12345"
+    assert db_session.get(Item, item.id).steam_item_nameid == "12345"
+
+
+def test_discover_item_steam_nameid_returns_bad_gateway_on_failure(db_session, monkeypatch):
+    item = Item(market_hash_name="AK-47 | Test", display_name="Test")
+    db_session.add(item)
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    def fail(self, market_hash_name):
+        raise ValueError("not found")
+
+    monkeypatch.setattr("app.routers.market.SteamNameIdService.discover", fail)
+
+    response = client.post(f"/api/items/{item.id}/steam-nameid/discover")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 502

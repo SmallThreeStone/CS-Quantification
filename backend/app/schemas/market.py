@@ -164,6 +164,12 @@ class ItemUpdate(BaseModel):
     pool_id: int | None = None
 
 
+class SteamNameIdOut(BaseModel):
+    item_id: int
+    market_hash_name: str
+    steam_item_nameid: str
+
+
 class MonitorPoolOut(BaseModel):
     id: int
     name: str
