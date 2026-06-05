@@ -13,6 +13,8 @@ def ensure_runtime_columns(engine: Engine) -> None:
         _add_column(engine, "collect_run_logs", "real_field_count", "INTEGER DEFAULT 0")
         _add_column(engine, "collect_run_logs", "fallback_field_count", "INTEGER DEFAULT 0")
         _add_column(engine, "collect_run_logs", "fallback_count", "INTEGER DEFAULT 0")
+    if "strategy_configs" in inspector.get_table_names():
+        _add_column(engine, "strategy_configs", "quality_penalty_max", "INTEGER DEFAULT 30")
 
 
 def _add_column(engine: Engine, table: str, column: str, definition: str) -> None:

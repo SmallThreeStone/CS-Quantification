@@ -116,6 +116,7 @@ export type StrategyConfig = {
   min_price_change_rate: number;
   min_buy_change_rate: number;
   cooldown_minutes: number;
+  quality_penalty_max: number;
 };
 
 export type StrategyConfigUpdate = Omit<StrategyConfig, "id" | "name">;

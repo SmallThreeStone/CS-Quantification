@@ -703,7 +703,8 @@ function SettingsView({
       min_sell_change_rate: strategy.min_sell_change_rate,
       min_price_change_rate: strategy.min_price_change_rate,
       min_buy_change_rate: strategy.min_buy_change_rate,
-      cooldown_minutes: strategy.cooldown_minutes
+      cooldown_minutes: strategy.cooldown_minutes,
+      quality_penalty_max: strategy.quality_penalty_max
     });
   }, [strategy]);
 
@@ -767,6 +768,14 @@ function SettingsView({
           max={1440}
           step={1}
           onChange={(value) => setForm({ ...form, cooldown_minutes: value })}
+        />
+        <NumberField
+          label="可信度最大降权"
+          value={form.quality_penalty_max}
+          min={0}
+          max={100}
+          step={1}
+          onChange={(value) => setForm({ ...form, quality_penalty_max: value })}
         />
       </div>
       <div className="settings-actions">

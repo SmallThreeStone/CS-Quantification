@@ -55,7 +55,8 @@ def collect(db: Session = Depends(get_db)) -> list[AlertOut]:
 @router.get("/monitor", response_model=list[MonitorItemOut])
 def monitor(db: Session = Depends(get_db)) -> list[MonitorItemOut]:
     items = db.query(Item).filter_by(is_active=True).order_by(Item.display_name.asc()).all()
-    return [_monitor_item(db, item) for item in items]
+    config = _default_strategy(db)
+    return [_monitor_item(db, item, config) for item in items]
 
 
 @router.get("/items", response_model=list[ItemOut])
@@ -102,8 +103,9 @@ def item_detail(item_id: int, db: Session = Depends(get_db)) -> ItemDetailOut:
     latest_alert = alerts[0] if alerts else None
     buy_score, sell_score = score_from_snapshot(latest_snapshot, latest_alert)
     source_quality = _source_quality(latest_snapshot)
+    config = _default_strategy(db)
     adjusted_buy_score, adjusted_sell_score, quality_penalty = _quality_adjusted_scores(
-        buy_score, sell_score, source_quality
+        buy_score, sell_score, source_quality, config.quality_penalty_max
     )
     return ItemDetailOut(
         id=item.id,
@@ -327,6 +329,7 @@ def update_strategy(payload: StrategyConfigUpdate, db: Session = Depends(get_db)
     config.min_price_change_rate = payload.min_price_change_rate
     config.min_buy_change_rate = payload.min_buy_change_rate
     config.cooldown_minutes = payload.cooldown_minutes
+    config.quality_penalty_max = payload.quality_penalty_max
     db.commit()
     db.refresh(config)
     return config
@@ -334,11 +337,12 @@ def update_strategy(payload: StrategyConfigUpdate, db: Session = Depends(get_db)
 
 @router.get("/opportunities", response_model=list[MonitorItemOut])
 def opportunities(db: Session = Depends(get_db)) -> list[MonitorItemOut]:
-    items = [_monitor_item(db, item) for item in db.query(Item).filter_by(is_active=True).all()]
+    config = _default_strategy(db)
+    items = [_monitor_item(db, item, config) for item in db.query(Item).filter_by(is_active=True).all()]
     return sorted(items, key=lambda row: max(row.adjusted_buy_score, row.adjusted_sell_score), reverse=True)
 
 
-def _monitor_item(db: Session, item: Item) -> MonitorItemOut:
+def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorItemOut:
     latest_snapshot = (
         db.query(MarketSnapshot)
         .filter(MarketSnapshot.item_id == item.id)
@@ -349,7 +353,7 @@ def _monitor_item(db: Session, item: Item) -> MonitorItemOut:
     buy_score, sell_score = score_from_snapshot(latest_snapshot, latest_alert)
     source_quality = _source_quality(latest_snapshot)
     adjusted_buy_score, adjusted_sell_score, quality_penalty = _quality_adjusted_scores(
-        buy_score, sell_score, source_quality
+        buy_score, sell_score, source_quality, config.quality_penalty_max
     )
     return MonitorItemOut(
         id=item.id,
@@ -513,10 +517,12 @@ def _quality_adjusted_scores(
     buy_score: int,
     sell_score: int,
     source_quality: SourceQualityOut | None,
+    max_penalty: int,
 ) -> tuple[int, int, int]:
     if source_quality is None:
-        return max(0, buy_score - 15), max(0, sell_score - 15), 15
-    penalty = round((1 - source_quality.real_ratio) * 30)
+        penalty = round(max_penalty / 2)
+        return max(0, buy_score - penalty), max(0, sell_score - penalty), penalty
+    penalty = round((1 - source_quality.real_ratio) * max_penalty)
     return max(0, buy_score - penalty), max(0, sell_score - penalty), penalty
 
 

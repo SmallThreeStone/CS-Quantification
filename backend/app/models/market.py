@@ -150,3 +150,4 @@ class StrategyConfig(Base):
     min_price_change_rate: Mapped[float] = mapped_column(Float, default=0.035)
     min_buy_change_rate: Mapped[float] = mapped_column(Float, default=0.12)
     cooldown_minutes: Mapped[int] = mapped_column(Integer, default=20)
+    quality_penalty_max: Mapped[int] = mapped_column(Integer, default=30)

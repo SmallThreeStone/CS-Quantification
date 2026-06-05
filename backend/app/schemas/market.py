@@ -127,6 +127,7 @@ class StrategyConfigOut(BaseModel):
     min_price_change_rate: float
     min_buy_change_rate: float
     cooldown_minutes: int
+    quality_penalty_max: int
 
     model_config = {"from_attributes": True}
 
@@ -137,6 +138,7 @@ class StrategyConfigUpdate(BaseModel):
     min_price_change_rate: float = Field(ge=0.001, le=1)
     min_buy_change_rate: float = Field(ge=0.01, le=5)
     cooldown_minutes: int = Field(ge=0, le=1440)
+    quality_penalty_max: int = Field(ge=0, le=100)
 
 
 class ItemOut(BaseModel):
