@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cs_quant
+      POSTGRES_USER: cs_quant
+      POSTGRES_PASSWORD: cs_quant_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql://cs_quant:cs_quant_password@postgres:5432/cs_quant
+      CORS_ORIGINS: http://localhost,http://localhost:5173
+      MARKET_PROVIDER: mock
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: ./backend
+    command: ["python", "-m", "app.jobs.worker"]
+    environment:
+      DATABASE_URL: postgresql://cs_quant:cs_quant_password@postgres:5432/cs_quant
+      MARKET_PROVIDER: mock
+    depends_on:
+      - backend
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
