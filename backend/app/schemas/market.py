@@ -365,6 +365,17 @@ class SourceFieldQualityOut(BaseModel):
     fields: list[FieldQualityOut]
 
 
+class SourceConfigOut(BaseModel):
+    provider: str
+    steam_orderbook_enabled: bool
+    configured_nameid_count: int
+    active_item_count: int
+    active_nameid_count: int
+    active_nameid_coverage_rate: float
+    readiness: str
+    suggestion: str
+
+
 class RetentionMetricOut(BaseModel):
     name: str
     retention_days: int | None

@@ -189,6 +189,17 @@ export type SourceFieldQuality = {
   fields: FieldQuality[];
 };
 
+export type SourceConfig = {
+  provider: string;
+  steam_orderbook_enabled: boolean;
+  configured_nameid_count: number;
+  active_item_count: number;
+  active_nameid_count: number;
+  active_nameid_coverage_rate: number;
+  readiness: string;
+  suggestion: string;
+};
+
 export type RetentionMetric = {
   name: string;
   retention_days: number | null;

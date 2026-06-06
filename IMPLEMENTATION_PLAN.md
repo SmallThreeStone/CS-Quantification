@@ -228,6 +228,7 @@
    1. 实施进度：已增加 `scripts/verify_deploy.ps1`，支持部署后验证和可选触发采集。
    2. 实施进度：部署验证脚本已读取 `/api/ops/health`，用于确认采集、推送和 worker 运行状态。
    3. 实施进度：部署验证脚本已读取 `/api/ops/readiness`，用于查看 P0 观察天数、采集轮次和快照覆盖率。
+   4. 实施进度：部署验证脚本已读取 `/api/source/config`，用于确认 provider、订单簿开关和 Steam NameID 覆盖率。
 9. 部署前备份数据库。
    1. 实施进度：已增加 `scripts/backup_postgres.ps1`，支持 Docker Compose PostgreSQL 生成 `.dump` 备份并清理过期备份。
 
@@ -270,6 +271,7 @@
 ### P0：可行性验证
 
 1. 确认数据源可用性。
+   1. 实施进度：已增加 `/api/source/config`，展示当前 provider、订单簿开关、Steam NameID 覆盖率和 P0 配置建议。
 2. 选定 30 个测试饰品。
    1. 实施进度：已扩充默认 seed 到 30 个测试饰品，其中超导体、清凉薄荷在重点池，其余武器、手套、箱子和贴纸在观察池。
 3. 连续采集 7 天。

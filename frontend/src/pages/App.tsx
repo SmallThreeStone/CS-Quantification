@@ -22,6 +22,7 @@ import type {
   OpsReadiness,
   PushRecord,
   Retention,
+  SourceConfig,
   SourceFieldQuality,
   StrategyConfig,
   StrategyConfigUpdate,
@@ -42,6 +43,7 @@ export default function App() {
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
+  const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
   const [retention, setRetention] = useState<Retention | null>(null);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
@@ -65,6 +67,7 @@ export default function App() {
         nextPushRecords,
         nextOpsHealth,
         nextOpsReadiness,
+        nextSourceConfig,
         nextSourceFieldQuality,
         nextRetention,
         nextBacktests,
@@ -80,6 +83,7 @@ export default function App() {
         api.pushRecords(),
         api.opsHealth(),
         api.opsReadiness(),
+        api.sourceConfig(),
         api.sourceFieldQuality(),
         api.retention(),
         api.backtests(),
@@ -95,6 +99,7 @@ export default function App() {
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
       setOpsReadiness(nextOpsReadiness);
+      setSourceConfig(nextSourceConfig);
       setSourceFieldQuality(nextSourceFieldQuality);
       setRetention(nextRetention);
       setBacktests(nextBacktests);
@@ -226,6 +231,7 @@ export default function App() {
             collectRuns={collectRuns}
             opsHealth={opsHealth}
             opsReadiness={opsReadiness}
+            sourceConfig={sourceConfig}
             sourceFieldQuality={sourceFieldQuality}
             retention={retention}
           />
@@ -1323,6 +1329,7 @@ function SourceView({
   collectRuns,
   opsHealth,
   opsReadiness,
+  sourceConfig,
   sourceFieldQuality,
   retention
 }: {
@@ -1333,6 +1340,7 @@ function SourceView({
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
   opsReadiness: OpsReadiness | null;
+  sourceConfig: SourceConfig | null;
   sourceFieldQuality: SourceFieldQuality | null;
   retention: Retention | null;
 }) {
@@ -1347,7 +1355,9 @@ function SourceView({
       <h2>数据源状态</h2>
       <div className="settings-grid">
         <Metric label="API 状态" value="在线" tone="up" />
-        <Metric label="行情来源" value="Mock / Steam priceoverview / 可选订单簿" />
+        <Metric label="行情来源" value={sourceConfig ? sourceConfig.provider : "暂无"} tone={sourceConfigTone(sourceConfig?.readiness)} />
+        <Metric label="订单簿" value={sourceConfig?.steam_orderbook_enabled ? "已开启" : "未开启"} tone={sourceConfig?.steam_orderbook_enabled ? "up" : "neutral"} />
+        <Metric label="NameID 覆盖" value={sourceConfig ? `${sourceConfig.active_nameid_count}/${sourceConfig.active_item_count}` : "暂无"} tone={sourceConfig && sourceConfig.active_nameid_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="监控饰品" value={`${items.length} 个`} />
         <Metric label="监控池" value={`${pools.length} 个`} />
         <Metric label="运维状态" value={opsHealth ? opsStatusText(opsHealth.status) : "暂无"} tone={opsTone(opsHealth?.status)} />
@@ -1368,6 +1378,19 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>数据源配置</h3>
+        {sourceConfig ? (
+          <div className="push-row">
+            <span>{sourceConfig.readiness}</span>
+            <strong>{formatPercent(sourceConfig.active_nameid_coverage_rate)}</strong>
+            <span>环境映射 {sourceConfig.configured_nameid_count}</span>
+            <span>{sourceConfig.suggestion}</span>
+          </div>
+        ) : (
+          <div className="empty">暂无数据源配置</div>
+        )}
       </div>
       <div className="push-table">
         <h3>字段真实率</h3>
@@ -1587,6 +1610,16 @@ function opsTone(status?: string) {
     return "down";
   }
   return "neutral";
+}
+
+function sourceConfigTone(readiness?: string) {
+  if (readiness === "ready") {
+    return "up";
+  }
+  if (readiness === "partial") {
+    return "neutral";
+  }
+  return "down";
 }
 
 function confidenceClass(level: string) {

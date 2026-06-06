@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from fastapi.testclient import TestClient
 
+from app.config import settings
 from app.database import get_db
 from app.main import app
 from app.models import Alert, CollectRunLog, Item, MarketSnapshot, Platform, PushRecord
@@ -201,6 +202,55 @@ def test_source_field_quality_counts_real_and_fallback_fields(db_session):
     assert fields["sell_count"]["real_count"] == 1
     assert fields["sell_count"]["fallback_count"] == 2
     assert fields["volume_24h"]["real_ratio"] == 1 / 3
+
+
+def test_source_config_reports_mock_suggestion(db_session):
+    previous_provider = settings.market_provider
+    settings.market_provider = "mock"
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/source/config")
+    finally:
+        settings.market_provider = previous_provider
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider"] == "mock"
+    assert body["readiness"] == "mock"
+    assert "Mock 数据源" in body["suggestion"]
+
+
+def test_source_config_reports_orderbook_nameid_coverage(db_session):
+    previous_provider = settings.market_provider
+    previous_orderbook = settings.steam_orderbook_enabled
+    settings.market_provider = "steam"
+    settings.steam_orderbook_enabled = True
+    db_session.add_all(
+        [
+            Item(market_hash_name="ready", display_name="Ready", steam_item_nameid="123", is_active=True),
+            Item(market_hash_name="missing", display_name="Missing", steam_item_nameid="", is_active=True),
+        ]
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/source/config")
+    finally:
+        settings.market_provider = previous_provider
+        settings.steam_orderbook_enabled = previous_orderbook
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider"] == "steam"
+    assert body["steam_orderbook_enabled"] is True
+    assert body["active_item_count"] == 2
+    assert body["active_nameid_count"] == 1
+    assert body["active_nameid_coverage_rate"] == 0.5
+    assert body["readiness"] == "partial"
 
 
 def create_ops_fixture(db_session) -> Alert:

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models import Alert, BacktestResult, CollectRunLog, Item, MarketSnapshot, MonitorPool, Platform, PushRecord
 from app.models import StrategyConfig
@@ -34,6 +35,7 @@ from app.schemas.market import (
     OpsReadinessOut,
     RetentionCleanupOut,
     PushRecordOut,
+    SourceConfigOut,
     SourceFieldQualityOut,
     RetentionMetricOut,
     RetentionOut,
@@ -156,6 +158,28 @@ def source_field_quality(limit: int = Query(default=500, ge=1, le=5000), db: Ses
             )
             for field, label in SOURCE_FIELDS
         ],
+    )
+
+
+@router.get("/source/config", response_model=SourceConfigOut)
+def source_config(db: Session = Depends(get_db)) -> SourceConfigOut:
+    provider = settings.market_provider.lower()
+    configured_nameids = _configured_nameids()
+    active_items = db.query(Item).filter_by(is_active=True).all()
+    active_nameid_count = sum(1 for item in active_items if item.steam_item_nameid)
+    active_count = len(active_items)
+    coverage = active_nameid_count / active_count if active_count else 0
+    readiness = "ready" if provider == "steam" and (not settings.steam_orderbook_enabled or coverage >= 0.8) else "mock" if provider == "mock" else "partial"
+    suggestion = _source_config_suggestion(provider, settings.steam_orderbook_enabled, coverage)
+    return SourceConfigOut(
+        provider=provider,
+        steam_orderbook_enabled=settings.steam_orderbook_enabled,
+        configured_nameid_count=len(configured_nameids),
+        active_item_count=active_count,
+        active_nameid_count=active_nameid_count,
+        active_nameid_coverage_rate=coverage,
+        readiness=readiness,
+        suggestion=suggestion,
     )
 
 
@@ -657,6 +681,26 @@ def _retention_metric(db: Session, model, date_column, name: str, retention_days
         oldest_at=db.query(date_column).order_by(date_column.asc()).limit(1).scalar(),
         policy=policy,
     )
+
+
+def _configured_nameids() -> dict[str, str]:
+    try:
+        payload = json.loads(settings.steam_orderbook_item_nameids)
+    except json.JSONDecodeError:
+        return {}
+    return {str(key): str(value) for key, value in payload.items() if value}
+
+
+def _source_config_suggestion(provider: str, orderbook_enabled: bool, coverage: float) -> str:
+    if provider == "mock":
+        return "当前为 Mock 数据源，仅适合本地自测；P0 验证前建议切换 MARKET_PROVIDER=steam"
+    if provider != "steam":
+        return "未知数据源配置，请确认 MARKET_PROVIDER"
+    if not orderbook_enabled:
+        return "Steam priceoverview 可验证价格与成交，买卖盘深度仍会补位；如需验证在售/求购，请开启订单簿"
+    if coverage < 0.8:
+        return "订单簿已开启，但活跃饰品 Steam NameID 覆盖不足，建议先批量发现或手工维护"
+    return "Steam 与订单簿配置已具备 P0 采集验证基础"
 
 
 def _alert_out(alert: Alert) -> AlertOut:
