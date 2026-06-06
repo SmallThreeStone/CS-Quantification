@@ -88,6 +88,25 @@ def test_collect_run_log_records_source_quality(db_session):
     assert service.last_run_log.fallback_count == 1
 
 
+def test_collect_run_high_fallback_ratio_suppresses_push(db_session):
+    platform = Platform(code="steam", name="Steam")
+    pool = MonitorPool(name="fallback-pool", interval_minutes=10)
+    db_session.add_all([platform, pool, StrategyConfig(name="default")])
+    db_session.flush()
+    for index in range(3):
+        db_session.add(Item(market_hash_name=f"fallback-{index}", display_name=f"补位{index}", pool_id=pool.id, is_active=True))
+    db_session.commit()
+    service = MarketService(db_session)
+    service.provider = PartialFallbackProvider()
+
+    service.collect_due_pools()
+
+    assert service.last_run_log is not None
+    assert service.last_run_log.snapshot_count == 3
+    assert service.last_run_log.fallback_count == 3
+    assert "fallback 覆盖" in service.push_suppress_reason()
+
+
 def test_steam_provider_marks_partial_real_fields(monkeypatch):
     class Response:
         def raise_for_status(self):
@@ -195,6 +214,27 @@ class QualityProvider:
                 "source_quality": {
                     "real_fields": ["lowest_price", "volume_24h"],
                     "fallback_fields": ["sell_count", "highest_buy_price", "buy_count", "avg_price_24h"],
+                    "is_fallback": False,
+                }
+            },
+        )
+
+
+class PartialFallbackProvider:
+    def fetch_quote(self, market_hash_name: str, steam_item_nameid: str = ""):
+        return Quote(
+            market_hash_name=market_hash_name,
+            lowest_price=100,
+            sell_count=10,
+            highest_buy_price=90,
+            buy_count=5,
+            volume_24h=3,
+            avg_price_24h=98,
+            captured_at=datetime.utcnow(),
+            raw_payload={
+                "source_quality": {
+                    "real_fields": ["lowest_price", "volume_24h", "avg_price_24h"],
+                    "fallback_fields": ["sell_count", "highest_buy_price", "buy_count"],
                     "is_fallback": False,
                 }
             },

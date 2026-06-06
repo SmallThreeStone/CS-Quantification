@@ -54,7 +54,7 @@ def health() -> HealthOut:
 def collect(db: Session = Depends(get_db)) -> list[AlertOut]:
     market_service = MarketService(db)
     alerts = market_service.collect_active_items()
-    PushService(db).dispatch_alerts(alerts)
+    PushService(db).dispatch_alerts(alerts, market_service.push_suppress_reason())
     BacktestService(db).evaluate_due_alerts()
     return [_alert_out(alert) for alert in alerts]
 

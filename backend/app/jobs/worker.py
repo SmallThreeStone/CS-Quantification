@@ -11,8 +11,9 @@ def run_once() -> int:
     create_app()
     db = SessionLocal()
     try:
-        alerts = MarketService(db).collect_due_pools()
-        PushService(db).dispatch_alerts(alerts)
+        market_service = MarketService(db)
+        alerts = market_service.collect_due_pools()
+        PushService(db).dispatch_alerts(alerts, market_service.push_suppress_reason())
         BacktestService(db).evaluate_due_alerts()
         return len(alerts)
     finally:

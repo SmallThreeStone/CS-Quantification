@@ -29,6 +29,21 @@ class MarketService:
         alerts = self._collect_items(due_items, mode="worker")
         return alerts
 
+    def push_suppress_reason(self) -> str:
+        log = self.last_run_log
+        if log is None or log.snapshot_count == 0:
+            return ""
+        total_fields = log.real_field_count + log.fallback_field_count
+        real_ratio = log.real_field_count / total_fields if total_fields else 0
+        fallback_item_ratio = log.fallback_count / max(log.snapshot_count, 1)
+        if log.real_field_count == 0:
+            return "数据源异常：本轮采集无真实字段，跳过外部推送"
+        if real_ratio < 0.3:
+            return f"数据源异常：真实字段占比 {real_ratio * 100:.1f}% 偏低，跳过外部推送"
+        if log.snapshot_count >= 3 and fallback_item_ratio >= 0.8:
+            return f"数据源异常：fallback 覆盖 {fallback_item_ratio * 100:.1f}% 饰品，跳过外部推送"
+        return ""
+
     def _collect_items(self, items: list[Item], mode: str) -> list[Alert]:
         started = datetime.utcnow()
         log = CollectRunLog(mode=mode, provider=settings.market_provider, item_count=len(items), started_at=started)

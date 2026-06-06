@@ -17,6 +17,17 @@ def test_dispatch_without_webhook_records_skipped_push(db_session):
     assert platform.name not in records[0].message
 
 
+def test_dispatch_with_suppress_reason_records_skipped_push(db_session):
+    _, _, alert = create_alert(db_session)
+
+    records = PushService(db_session).dispatch_alerts([alert], "数据源异常：跳过外部推送")
+
+    assert len(records) == 1
+    assert records[0].status == "skipped"
+    assert records[0].channel == "none"
+    assert records[0].error == "数据源异常：跳过外部推送"
+
+
 def test_push_message_contains_decision_fields(db_session):
     _, _, alert = create_alert(db_session)
 

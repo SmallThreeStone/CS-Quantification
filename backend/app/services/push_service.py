@@ -11,9 +11,12 @@ class PushService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def dispatch_alerts(self, alerts: list[Alert]) -> list[PushRecord]:
+    def dispatch_alerts(self, alerts: list[Alert], suppress_reason: str = "") -> list[PushRecord]:
         records = []
         for alert in alerts:
+            if suppress_reason:
+                records.append(self._record(alert, "none", "skipped", "", self._message(alert), suppress_reason))
+                continue
             if alert.severity == "P3":
                 records.append(self._record(alert, "none", "skipped", "", self._message(alert), "P3 告警不推送"))
                 continue
