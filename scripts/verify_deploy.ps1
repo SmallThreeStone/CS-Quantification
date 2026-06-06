@@ -16,6 +16,9 @@ docker compose ps
 $health = Invoke-RestMethod "$BaseUrl/api/health"
 Show-Json "health" $health
 
+$opsHealth = Invoke-RestMethod "$BaseUrl/api/ops/health"
+Show-Json "ops-health" $opsHealth
+
 $monitor = Invoke-RestMethod "$BaseUrl/api/monitor"
 Show-Json "monitor" @{ count = $monitor.Count }
 

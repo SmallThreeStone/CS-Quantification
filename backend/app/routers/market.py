@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -29,6 +30,7 @@ from app.schemas.market import (
     MonitorPoolOut,
     MonitorPoolUpdate,
     MonitorItemOut,
+    OpsHealthOut,
     PushRecordOut,
     SnapshotOut,
     SourceQualityOut,
@@ -48,6 +50,37 @@ router = APIRouter()
 @router.get("/health", response_model=HealthOut)
 def health() -> HealthOut:
     return HealthOut(status="ok", service="cs-quantification-api", version="0.1")
+
+
+@router.get("/ops/health", response_model=OpsHealthOut)
+def ops_health(db: Session = Depends(get_db)) -> OpsHealthOut:
+    since = datetime.utcnow() - timedelta(hours=24)
+    runs = db.query(CollectRunLog).filter(CollectRunLog.started_at >= since).order_by(CollectRunLog.started_at.desc()).all()
+    latest = runs[0] if runs else None
+    push_records = db.query(PushRecord).filter(PushRecord.created_at >= since).all()
+    snapshot_count = sum(run.snapshot_count for run in runs)
+    alert_count = sum(run.alert_count for run in runs)
+    source_error_count = sum(run.error_count for run in runs)
+    real_fields = sum(run.real_field_count for run in runs)
+    fallback_fields = sum(run.fallback_field_count for run in runs)
+    total_fields = real_fields + fallback_fields
+    collect_success_rate = sum(1 for run in runs if run.status == "success") / len(runs) if runs else 0
+    sent_or_skipped = sum(1 for record in push_records if record.status in {"sent", "skipped"})
+    push_success_rate = sent_or_skipped / len(push_records) if push_records else 1
+    latest_finished_at = latest.finished_at or latest.started_at if latest else None
+    worker_lag = (datetime.utcnow() - latest_finished_at).total_seconds() / 60 if latest_finished_at else None
+    return OpsHealthOut(
+        status=_ops_status(runs, push_records, worker_lag, source_error_count),
+        latest_run_status=latest.status if latest else "none",
+        latest_run_at=latest_finished_at,
+        collect_success_rate=collect_success_rate,
+        push_success_rate=push_success_rate,
+        snapshot_count_24h=snapshot_count,
+        alert_count_24h=alert_count,
+        source_error_count_24h=source_error_count,
+        real_field_ratio_24h=real_fields / total_fields if total_fields else 0,
+        worker_lag_minutes=worker_lag,
+    )
 
 
 @router.post("/collect", response_model=list[AlertOut])
@@ -479,6 +512,25 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
 
 def _opportunity_rank_score(row: MonitorItemOut) -> int:
     return max(row.adjusted_buy_score, row.adjusted_sell_score) + row.backtest_signal.score_adjustment
+
+
+def _ops_status(
+    runs: list[CollectRunLog],
+    push_records: list[PushRecord],
+    worker_lag_minutes: float | None,
+    source_error_count: int,
+) -> str:
+    if not runs:
+        return "warn"
+    if all(run.status == "failed" for run in runs):
+        return "fail"
+    if push_records and all(record.status == "failed" for record in push_records):
+        return "fail"
+    if worker_lag_minutes is not None and worker_lag_minutes > 60:
+        return "warn"
+    if source_error_count > 0 or any(run.status == "partial" for run in runs):
+        return "warn"
+    return "ok"
 
 
 def _alert_out(alert: Alert) -> AlertOut:

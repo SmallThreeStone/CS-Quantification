@@ -324,3 +324,16 @@ class HealthOut(BaseModel):
     status: str
     service: str
     version: str
+
+
+class OpsHealthOut(BaseModel):
+    status: str
+    latest_run_status: str
+    latest_run_at: datetime | None
+    collect_success_rate: float
+    push_success_rate: float
+    snapshot_count_24h: int
+    alert_count_24h: int
+    source_error_count_24h: int
+    real_field_ratio_24h: float
+    worker_lag_minutes: float | None

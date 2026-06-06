@@ -1,0 +1,125 @@
+from datetime import datetime, timedelta
+
+from fastapi.testclient import TestClient
+
+from app.database import get_db
+from app.main import app
+from app.models import Alert, CollectRunLog, Item, MarketSnapshot, Platform, PushRecord
+from tests.test_strategy_api import override_session
+
+
+def test_ops_health_returns_ok_metrics(db_session):
+    alert = create_ops_fixture(db_session)
+    db_session.add(
+        PushRecord(
+            alert_id=alert.id,
+            channel="none",
+            status="skipped",
+            target="",
+            message="ok",
+        )
+    )
+    db_session.add(
+        CollectRunLog(
+            mode="worker",
+            provider="mock",
+            status="success",
+            item_count=2,
+            snapshot_count=2,
+            alert_count=1,
+            error_count=0,
+            real_field_count=8,
+            fallback_field_count=2,
+            fallback_count=0,
+            duration_ms=120,
+            started_at=datetime.utcnow() - timedelta(minutes=5),
+            finished_at=datetime.utcnow() - timedelta(minutes=4),
+        )
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/health")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["latest_run_status"] == "success"
+    assert body["collect_success_rate"] == 1
+    assert body["push_success_rate"] == 1
+    assert body["snapshot_count_24h"] == 2
+    assert body["alert_count_24h"] == 1
+    assert body["real_field_ratio_24h"] == 0.8
+
+
+def test_ops_health_warns_without_recent_runs(db_session):
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/health")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["status"] == "warn"
+    assert response.json()["latest_run_status"] == "none"
+
+
+def test_ops_health_fails_when_recent_runs_all_failed(db_session):
+    db_session.add(
+        CollectRunLog(
+            mode="worker",
+            provider="mock",
+            status="failed",
+            item_count=1,
+            snapshot_count=0,
+            alert_count=0,
+            error_count=1,
+            started_at=datetime.utcnow() - timedelta(minutes=3),
+            finished_at=datetime.utcnow() - timedelta(minutes=2),
+        )
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/health")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["status"] == "fail"
+
+
+def create_ops_fixture(db_session) -> Alert:
+    item = Item(market_hash_name="ops-item", display_name="Ops Item")
+    platform = Platform(code="steam", name="Steam")
+    db_session.add_all([item, platform])
+    db_session.flush()
+    snapshot = MarketSnapshot(
+        item_id=item.id,
+        platform_id=platform.id,
+        lowest_price=100,
+        sell_count=10,
+        highest_buy_price=90,
+        buy_count=5,
+        volume_24h=2,
+        avg_price_24h=98,
+    )
+    db_session.add(snapshot)
+    db_session.flush()
+    alert = Alert(
+        item_id=item.id,
+        platform_id=platform.id,
+        snapshot_id=snapshot.id,
+        alert_type="在售变化",
+        title="ops",
+        detail="ops",
+        previous_value=10,
+        current_value=20,
+        absolute_change=10,
+        change_rate=1,
+    )
+    db_session.add(alert)
+    db_session.flush()
+    return alert
