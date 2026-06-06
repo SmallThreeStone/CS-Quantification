@@ -150,6 +150,19 @@ export type CollectRun = {
   finished_at: string | null;
 };
 
+export type OpsHealth = {
+  status: "ok" | "warn" | "fail";
+  latest_run_status: string;
+  latest_run_at: string | null;
+  collect_success_rate: number;
+  push_success_rate: number;
+  snapshot_count_24h: number;
+  alert_count_24h: number;
+  source_error_count_24h: number;
+  real_field_ratio_24h: number;
+  worker_lag_minutes: number | null;
+};
+
 export type StrategyConfig = {
   id: number;
   name: string;

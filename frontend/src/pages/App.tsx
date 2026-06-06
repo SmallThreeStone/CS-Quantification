@@ -18,6 +18,7 @@ import type {
   MonitorPool,
   MonitorPoolInput,
   MonitorItem,
+  OpsHealth,
   PushRecord,
   StrategyConfig,
   StrategyConfigUpdate,
@@ -36,6 +37,7 @@ export default function App() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertFilters, setAlertFilters] = useState<AlertFilters>({});
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
+  const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
   const [tuningSuggestions, setTuningSuggestions] = useState<TuningSuggestion[]>([]);
@@ -55,6 +57,7 @@ export default function App() {
         nextPools,
         nextAlerts,
         nextPushRecords,
+        nextOpsHealth,
         nextBacktests,
         nextBacktestSummary,
         nextTuningSuggestions,
@@ -66,6 +69,7 @@ export default function App() {
         api.monitorPools(),
         api.alerts(alertFilters),
         api.pushRecords(),
+        api.opsHealth(),
         api.backtests(),
         api.backtestSummary(),
         api.tuningSuggestions(),
@@ -77,6 +81,7 @@ export default function App() {
       setPools(nextPools);
       setAlerts(nextAlerts);
       setPushRecords(nextPushRecords);
+      setOpsHealth(nextOpsHealth);
       setBacktests(nextBacktests);
       setBacktestSummary(nextBacktestSummary);
       setTuningSuggestions(nextTuningSuggestions);
@@ -198,7 +203,14 @@ export default function App() {
         )}
         {tab === "settings" && <SettingsView strategy={strategy} onSaved={setStrategy} />}
         {tab === "source" && (
-          <SourceView items={items} pools={pools} alerts={alerts} pushRecords={pushRecords} collectRuns={collectRuns} />
+          <SourceView
+            items={items}
+            pools={pools}
+            alerts={alerts}
+            pushRecords={pushRecords}
+            collectRuns={collectRuns}
+            opsHealth={opsHealth}
+          />
         )}
       </main>
     </div>
@@ -1290,13 +1302,15 @@ function SourceView({
   pools,
   alerts,
   pushRecords,
-  collectRuns
+  collectRuns,
+  opsHealth
 }: {
   items: MonitorItem[];
   pools: MonitorPool[];
   alerts: Alert[];
   pushRecords: PushRecord[];
   collectRuns: CollectRun[];
+  opsHealth: OpsHealth | null;
 }) {
   const hasSnapshots = items.some((item) => item.latest_snapshot);
   const latestPush = pushRecords[0];
@@ -1312,10 +1326,17 @@ function SourceView({
         <Metric label="行情来源" value="Mock / Steam priceoverview / 可选订单簿" />
         <Metric label="监控饰品" value={`${items.length} 个`} />
         <Metric label="监控池" value={`${pools.length} 个`} />
+        <Metric label="运维状态" value={opsHealth ? opsStatusText(opsHealth.status) : "暂无"} tone={opsTone(opsHealth?.status)} />
+        <Metric label="采集成功率" value={opsHealth ? formatPercent(opsHealth.collect_success_rate) : "暂无"} tone={opsHealth && opsHealth.collect_success_rate >= 0.8 ? "up" : "neutral"} />
+        <Metric label="推送成功率" value={opsHealth ? formatPercent(opsHealth.push_success_rate) : "暂无"} tone={opsHealth && opsHealth.push_success_rate >= 0.8 ? "up" : "neutral"} />
+        <Metric label="worker 延迟" value={opsHealth?.worker_lag_minutes == null ? "暂无" : `${opsHealth.worker_lag_minutes.toFixed(1)} 分钟`} tone={opsHealth?.status === "fail" ? "down" : "neutral"} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
+        <Metric label="24h 快照" value={opsHealth ? `${opsHealth.snapshot_count_24h} 条` : "暂无"} />
+        <Metric label="24h 告警" value={opsHealth ? `${opsHealth.alert_count_24h} 条` : "暂无"} />
+        <Metric label="24h 异常" value={opsHealth ? `${opsHealth.source_error_count_24h} 次` : "暂无"} tone={opsHealth && opsHealth.source_error_count_24h > 0 ? "down" : "neutral"} />
         <Metric label="最近告警" value={`${alerts.length} 条`} />
         <Metric label="最近采集" value={latestRun ? `${latestRun.status}:${latestRun.snapshot_count}` : "暂无"} />
-        <Metric label="真实字段占比" value={latestRun ? formatPercent(qualityRatio) : "暂无"} tone={qualityRatio > 0.5 ? "up" : "neutral"} />
+        <Metric label="真实字段占比" value={opsHealth ? formatPercent(opsHealth.real_field_ratio_24h) : latestRun ? formatPercent(qualityRatio) : "暂无"} tone={(opsHealth?.real_field_ratio_24h ?? qualityRatio) > 0.5 ? "up" : "neutral"} />
         <Metric label="补位次数" value={latestRun ? `${latestRun.fallback_count} 次` : "暂无"} />
         <Metric label="最近推送" value={latestPush ? `${latestPush.channel}:${latestPush.status}` : "暂无"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
@@ -1482,6 +1503,26 @@ function qualityLevelText(level: string) {
     return "部分补位";
   }
   return "补位";
+}
+
+function opsStatusText(status: string) {
+  if (status === "ok") {
+    return "正常";
+  }
+  if (status === "fail") {
+    return "故障";
+  }
+  return "预警";
+}
+
+function opsTone(status?: string) {
+  if (status === "ok") {
+    return "up";
+  }
+  if (status === "fail") {
+    return "down";
+  }
+  return "neutral";
 }
 
 function confidenceClass(level: string) {
