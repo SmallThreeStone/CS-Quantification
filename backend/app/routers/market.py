@@ -31,6 +31,7 @@ from app.schemas.market import (
     MonitorPoolUpdate,
     MonitorItemOut,
     OpsHealthOut,
+    RetentionCleanupOut,
     PushRecordOut,
     RetentionMetricOut,
     RetentionOut,
@@ -47,6 +48,8 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
+SNAPSHOT_RETENTION_DAYS = 180
+COLLECT_LOG_RETENTION_DAYS = 90
 
 
 @router.get("/health", response_model=HealthOut)
@@ -87,19 +90,41 @@ def ops_health(db: Session = Depends(get_db)) -> OpsHealthOut:
 
 @router.get("/retention", response_model=RetentionOut)
 def retention(db: Session = Depends(get_db)) -> RetentionOut:
-    snapshot_days = 180
-    collect_log_days = 90
     return RetentionOut(
-        snapshot_retention_days=snapshot_days,
-        collect_log_retention_days=collect_log_days,
+        snapshot_retention_days=SNAPSHOT_RETENTION_DAYS,
+        collect_log_retention_days=COLLECT_LOG_RETENTION_DAYS,
         alert_retention_days=None,
         backtest_retention_days=None,
         metrics=[
-            _retention_metric(db, MarketSnapshot, MarketSnapshot.captured_at, "行情快照", snapshot_days, "保留 3-6 个月，当前按 180 天观察"),
+            _retention_metric(db, MarketSnapshot, MarketSnapshot.captured_at, "行情快照", SNAPSHOT_RETENTION_DAYS, "保留 3-6 个月，当前按 180 天观察"),
             _retention_metric(db, Alert, Alert.created_at, "告警记录", None, "长期保留，用于复盘"),
             _retention_metric(db, BacktestResult, BacktestResult.created_at, "回测结果", None, "长期保留，用于策略调参"),
-            _retention_metric(db, CollectRunLog, CollectRunLog.started_at, "采集日志", collect_log_days, "保留 90 天，用于运维排查"),
+            _retention_metric(db, CollectRunLog, CollectRunLog.started_at, "采集日志", COLLECT_LOG_RETENTION_DAYS, "保留 90 天，用于运维排查"),
         ],
+    )
+
+
+@router.post("/retention/cleanup", response_model=RetentionCleanupOut)
+def cleanup_retention(db: Session = Depends(get_db)) -> RetentionCleanupOut:
+    snapshot_cutoff = datetime.utcnow() - timedelta(days=SNAPSHOT_RETENTION_DAYS)
+    collect_log_cutoff = datetime.utcnow() - timedelta(days=COLLECT_LOG_RETENTION_DAYS)
+    referenced_snapshot_ids = db.query(Alert.snapshot_id).filter(Alert.snapshot_id.isnot(None))
+    deleted_snapshots = (
+        db.query(MarketSnapshot)
+        .filter(MarketSnapshot.captured_at < snapshot_cutoff, ~MarketSnapshot.id.in_(referenced_snapshot_ids))
+        .delete(synchronize_session=False)
+    )
+    deleted_collect_logs = (
+        db.query(CollectRunLog)
+        .filter(CollectRunLog.started_at < collect_log_cutoff)
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return RetentionCleanupOut(
+        snapshot_retention_days=SNAPSHOT_RETENTION_DAYS,
+        collect_log_retention_days=COLLECT_LOG_RETENTION_DAYS,
+        deleted_snapshots=deleted_snapshots,
+        deleted_collect_logs=deleted_collect_logs,
     )
 
 

@@ -179,6 +179,13 @@ export type Retention = {
   metrics: RetentionMetric[];
 };
 
+export type RetentionCleanup = {
+  snapshot_retention_days: number;
+  collect_log_retention_days: number;
+  deleted_snapshots: number;
+  deleted_collect_logs: number;
+};
+
 export type StrategyConfig = {
   id: number;
   name: string;

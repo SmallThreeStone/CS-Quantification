@@ -353,3 +353,10 @@ class RetentionOut(BaseModel):
     alert_retention_days: int | None
     backtest_retention_days: int | None
     metrics: list[RetentionMetricOut]
+
+
+class RetentionCleanupOut(BaseModel):
+    snapshot_retention_days: int
+    collect_log_retention_days: int
+    deleted_snapshots: int
+    deleted_collect_logs: int

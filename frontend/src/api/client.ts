@@ -12,6 +12,7 @@ import type {
   OpsHealth,
   PushRecord,
   Retention,
+  RetentionCleanup,
   StrategyConfig,
   StrategyConfigUpdate,
   TuningSuggestion
@@ -54,6 +55,7 @@ export const api = {
   health: () => request<{ status: string; service: string; version: string }>("/api/health"),
   opsHealth: () => request<OpsHealth>("/api/ops/health"),
   retention: () => request<Retention>("/api/retention"),
+  cleanupRetention: () => request<RetentionCleanup>("/api/retention/cleanup", { method: "POST" }),
   collect: () => request<Alert[]>("/api/collect", { method: "POST" }),
   collectRuns: () => request<CollectRun[]>("/api/collect-runs"),
   monitor: () => request<MonitorItem[]>("/api/monitor"),
