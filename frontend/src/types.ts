@@ -163,6 +163,22 @@ export type OpsHealth = {
   worker_lag_minutes: number | null;
 };
 
+export type RetentionMetric = {
+  name: string;
+  retention_days: number | null;
+  row_count: number;
+  oldest_at: string | null;
+  policy: string;
+};
+
+export type Retention = {
+  snapshot_retention_days: number;
+  collect_log_retention_days: number;
+  alert_retention_days: number | null;
+  backtest_retention_days: number | null;
+  metrics: RetentionMetric[];
+};
+
 export type StrategyConfig = {
   id: number;
   name: string;

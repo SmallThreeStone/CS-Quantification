@@ -20,6 +20,7 @@ import type {
   MonitorItem,
   OpsHealth,
   PushRecord,
+  Retention,
   StrategyConfig,
   StrategyConfigUpdate,
   TuningSuggestion
@@ -38,6 +39,7 @@ export default function App() {
   const [alertFilters, setAlertFilters] = useState<AlertFilters>({});
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
+  const [retention, setRetention] = useState<Retention | null>(null);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
   const [tuningSuggestions, setTuningSuggestions] = useState<TuningSuggestion[]>([]);
@@ -58,6 +60,7 @@ export default function App() {
         nextAlerts,
         nextPushRecords,
         nextOpsHealth,
+        nextRetention,
         nextBacktests,
         nextBacktestSummary,
         nextTuningSuggestions,
@@ -70,6 +73,7 @@ export default function App() {
         api.alerts(alertFilters),
         api.pushRecords(),
         api.opsHealth(),
+        api.retention(),
         api.backtests(),
         api.backtestSummary(),
         api.tuningSuggestions(),
@@ -82,6 +86,7 @@ export default function App() {
       setAlerts(nextAlerts);
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
+      setRetention(nextRetention);
       setBacktests(nextBacktests);
       setBacktestSummary(nextBacktestSummary);
       setTuningSuggestions(nextTuningSuggestions);
@@ -210,6 +215,7 @@ export default function App() {
             pushRecords={pushRecords}
             collectRuns={collectRuns}
             opsHealth={opsHealth}
+            retention={retention}
           />
         )}
       </main>
@@ -1303,7 +1309,8 @@ function SourceView({
   alerts,
   pushRecords,
   collectRuns,
-  opsHealth
+  opsHealth,
+  retention
 }: {
   items: MonitorItem[];
   pools: MonitorPool[];
@@ -1311,6 +1318,7 @@ function SourceView({
   pushRecords: PushRecord[];
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
+  retention: Retention | null;
 }) {
   const hasSnapshots = items.some((item) => item.latest_snapshot);
   const latestPush = pushRecords[0];
@@ -1353,6 +1361,22 @@ function SourceView({
           ))
         ) : (
           <div className="empty">暂无低可信饰品</div>
+        )}
+      </div>
+      <div className="push-table">
+        <h3>数据保留策略</h3>
+        {retention ? (
+          retention.metrics.map((metric) => (
+            <div className="push-row" key={metric.name}>
+              <span>{metric.name}</span>
+              <strong>{metric.policy}</strong>
+              <span>{metric.row_count} 条</span>
+              <span>{retentionDaysText(metric.retention_days)}</span>
+              <span>{metric.oldest_at ? formatDate(metric.oldest_at) : "暂无"}</span>
+            </div>
+          ))
+        ) : (
+          <div className="empty">暂无保留策略</div>
         )}
       </div>
       <div className="push-table">
@@ -1437,6 +1461,10 @@ function formatPercent(value: number) {
 
 function formatChange(value: number) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}`;
+}
+
+function retentionDaysText(days: number | null) {
+  return days == null ? "长期" : `${days} 天`;
 }
 
 function strategyAdjustmentText(buy: number, sell: number) {
