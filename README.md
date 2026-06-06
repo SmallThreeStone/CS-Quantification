@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.35 — 增加回测调参建议
+V0.1.36 — 增加数据库备份脚本
 
 ## 功能范围
 
@@ -106,6 +106,15 @@ docker compose up -d --build
 
 该脚本需要服务器已安装 Docker Compose，并且项目服务已经启动。
 
+### 数据库备份
+
+```powershell
+.\scripts\backup_postgres.ps1
+.\scripts\backup_postgres.ps1 -BackupDir ./backups/postgres -RetentionDays 14
+```
+
+备份脚本通过 Docker Compose 调用 `postgres` 服务内的 `pg_dump`，生成带时间戳的 `.dump` 文件，并按保留天数清理旧备份。
+
 ## API
 
 - `GET /api/health`
@@ -126,6 +135,7 @@ docker compose up -d --build
 - `GET /api/alerts`
 - `GET /api/backtests`
 - `GET /api/backtests/summary`
+- `GET /api/backtests/tuning-suggestions`
 - `POST /api/backtests/evaluate`
 - `GET /api/push-records`
 - `GET /api/strategy`
@@ -148,6 +158,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.36 — 增加 PostgreSQL 备份脚本，支持 Docker Compose 环境生成 `.dump` 备份并按保留天数清理。
 - V0.1.35 — 增加回测调参建议，根据同类告警 60 分钟样本给出继续观察、收紧阈值、适度放宽或保持当前。
 - V0.1.34 — 机会榜接入同类告警 60 分钟回测信号，展示样本数、胜率、平均变化和排序修正。
 - V0.1.33 — 增加品类策略画像，按手套、武器、箱子/贴纸等分类修正买入/卖出参考分并展示理由。
