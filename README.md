@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.39 — 数据源页展示运维健康
+V0.1.40 — 增加配置备份脚本
 
 ## 功能范围
 
@@ -117,6 +117,15 @@ docker compose up -d --build
 
 备份脚本通过 Docker Compose 调用 `postgres` 服务内的 `pg_dump`，生成带时间戳的 `.dump` 文件，并按保留天数清理旧备份。
 
+### 配置备份
+
+```powershell
+.\scripts\backup_config.ps1
+.\scripts\backup_config.ps1 -BackupDir ./backups/config -RetentionDays 30
+```
+
+配置备份会打包 `.env`、`.env.example`、`docker-compose.yml`、`README.md`、`CLAUDE.md` 和 `scripts/`，生成带时间戳的 `.zip` 文件。
+
 ## API
 
 - `GET /api/health`
@@ -161,6 +170,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.40 — 增加配置备份脚本，打包环境变量、Compose、项目说明和部署脚本并按保留天数清理。
 - V0.1.39 — 数据源状态页展示运维健康指标，包括采集/推送成功率、worker 延迟、24h 快照、告警和异常数。
 - V0.1.38 — 增加运维健康接口，汇总采集、推送、worker 延迟、快照、告警和数据源异常指标。
 - V0.1.37 — 增加数据源异常推送熔断，本轮采集质量过低时跳过外部推送并记录原因。

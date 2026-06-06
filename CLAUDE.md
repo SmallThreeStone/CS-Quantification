@@ -101,7 +101,7 @@ cd frontend && npm run dev
 - **不要为了普通后端代码修改执行 `docker compose down && docker compose up -d --build`**：后端 Python 代码、采集规则、告警规则、小范围运行时代码，优先用 `docker compose restart backend worker` 或对应服务名
 - **必须重建镜像的情况**：`frontend/` 源码或静态构建产物变化、`package.json`/`package-lock.json`、`requirements.txt`、Dockerfile、docker-compose.yml、Node/Python 版本、系统依赖、构建脚本、镜像内路径结构发生变化时，执行 `docker compose up -d --build`
 - **Docker 架构：多服务 Compose**。建议拆分为 frontend、backend、worker、postgres、redis，采集任务和 API 服务分离，便于单独重启和监控
-- **部署前必须先备份数据库**：常规线上更新前执行 `./scripts/backup_postgres.ps1` 或等效 `pg_dump`，确认备份文件非空后再执行 `git pull`、重启或重建
+- **部署前必须先备份数据库和重要配置**：常规线上更新前执行 `./scripts/backup_postgres.ps1` 与 `./scripts/backup_config.ps1`，确认备份文件非空后再执行 `git pull`、重启或重建
 - **容器内热更新前置检查**：先确认服务器 git 工作区干净、当前分支正确、目标 commit 与远端一致；pull 后必须确认实际 HEAD 等于本地已推送 commit
 - **热更新后置检查**：重启后必须验证 `docker compose ps`、`/api/health`、公网首页 200、采集任务正常运行、告警推送服务无错误日志
 - **仅配置/数据变更不必重建镜像**：只改 `.env`、策略配置、数据库、缓存、运行时数据时，用 `docker compose restart` 或 `docker compose up -d`
@@ -117,7 +117,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.39 — 数据源页展示运维健康
+V0.1.40 — 增加配置备份脚本
 
 ## 环境要求
 
