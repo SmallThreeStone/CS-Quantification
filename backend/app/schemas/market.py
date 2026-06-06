@@ -337,3 +337,19 @@ class OpsHealthOut(BaseModel):
     source_error_count_24h: int
     real_field_ratio_24h: float
     worker_lag_minutes: float | None
+
+
+class RetentionMetricOut(BaseModel):
+    name: str
+    retention_days: int | None
+    row_count: int
+    oldest_at: datetime | None
+    policy: str
+
+
+class RetentionOut(BaseModel):
+    snapshot_retention_days: int
+    collect_log_retention_days: int
+    alert_retention_days: int | None
+    backtest_retention_days: int | None
+    metrics: list[RetentionMetricOut]

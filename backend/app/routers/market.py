@@ -32,6 +32,8 @@ from app.schemas.market import (
     MonitorItemOut,
     OpsHealthOut,
     PushRecordOut,
+    RetentionMetricOut,
+    RetentionOut,
     SnapshotOut,
     SourceQualityOut,
     StrategyConfigOut,
@@ -80,6 +82,24 @@ def ops_health(db: Session = Depends(get_db)) -> OpsHealthOut:
         source_error_count_24h=source_error_count,
         real_field_ratio_24h=real_fields / total_fields if total_fields else 0,
         worker_lag_minutes=worker_lag,
+    )
+
+
+@router.get("/retention", response_model=RetentionOut)
+def retention(db: Session = Depends(get_db)) -> RetentionOut:
+    snapshot_days = 180
+    collect_log_days = 90
+    return RetentionOut(
+        snapshot_retention_days=snapshot_days,
+        collect_log_retention_days=collect_log_days,
+        alert_retention_days=None,
+        backtest_retention_days=None,
+        metrics=[
+            _retention_metric(db, MarketSnapshot, MarketSnapshot.captured_at, "行情快照", snapshot_days, "保留 3-6 个月，当前按 180 天观察"),
+            _retention_metric(db, Alert, Alert.created_at, "告警记录", None, "长期保留，用于复盘"),
+            _retention_metric(db, BacktestResult, BacktestResult.created_at, "回测结果", None, "长期保留，用于策略调参"),
+            _retention_metric(db, CollectRunLog, CollectRunLog.started_at, "采集日志", collect_log_days, "保留 90 天，用于运维排查"),
+        ],
     )
 
 
@@ -531,6 +551,16 @@ def _ops_status(
     if source_error_count > 0 or any(run.status == "partial" for run in runs):
         return "warn"
     return "ok"
+
+
+def _retention_metric(db: Session, model, date_column, name: str, retention_days: int | None, policy: str) -> RetentionMetricOut:
+    return RetentionMetricOut(
+        name=name,
+        retention_days=retention_days,
+        row_count=db.query(model).count(),
+        oldest_at=db.query(date_column).order_by(date_column.asc()).limit(1).scalar(),
+        policy=policy,
+    )
 
 
 def _alert_out(alert: Alert) -> AlertOut:
