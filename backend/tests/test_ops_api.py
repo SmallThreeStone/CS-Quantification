@@ -91,6 +91,68 @@ def test_ops_health_fails_when_recent_runs_all_failed(db_session):
     assert response.json()["status"] == "fail"
 
 
+def test_ops_readiness_reports_empty_state(db_session):
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/readiness")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ready_for_7d_review"] is False
+    assert body["collect_run_count"] == 0
+    assert body["monitored_item_count"] == 0
+
+
+def test_ops_readiness_marks_seven_day_collection_ready(db_session):
+    platform = Platform(code="steam", name="Steam")
+    first_item = Item(market_hash_name="ready-1", display_name="Ready 1")
+    second_item = Item(market_hash_name="ready-2", display_name="Ready 2")
+    db_session.add_all([platform, first_item, second_item])
+    db_session.flush()
+    start = datetime.utcnow() - timedelta(days=8)
+    for index in range(9):
+        db_session.add(
+            CollectRunLog(
+                mode="worker",
+                provider="mock",
+                status="success",
+                item_count=2,
+                snapshot_count=2,
+                started_at=start + timedelta(days=index),
+                finished_at=start + timedelta(days=index, minutes=1),
+            )
+        )
+    for item in [first_item, second_item]:
+        db_session.add(
+            MarketSnapshot(
+                item_id=item.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=90,
+                buy_count=5,
+                volume_24h=2,
+                avg_price_24h=98,
+            )
+        )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/readiness")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ready_for_7d_review"] is True
+    assert body["observed_days"] >= 7
+    assert body["collect_run_count"] == 9
+    assert body["collect_success_rate"] == 1
+    assert body["snapshot_coverage_rate"] == 1
+
+
 def create_ops_fixture(db_session) -> Alert:
     item = Item(market_hash_name="ops-item", display_name="Ops Item")
     platform = Platform(code="steam", name="Steam")

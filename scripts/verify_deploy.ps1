@@ -19,6 +19,9 @@ Show-Json "health" $health
 $opsHealth = Invoke-RestMethod "$BaseUrl/api/ops/health"
 Show-Json "ops-health" $opsHealth
 
+$opsReadiness = Invoke-RestMethod "$BaseUrl/api/ops/readiness"
+Show-Json "ops-readiness" $opsReadiness
+
 $monitor = Invoke-RestMethod "$BaseUrl/api/monitor"
 Show-Json "monitor" @{ count = $monitor.Count }
 

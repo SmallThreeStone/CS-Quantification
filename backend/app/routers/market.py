@@ -31,6 +31,7 @@ from app.schemas.market import (
     MonitorPoolUpdate,
     MonitorItemOut,
     OpsHealthOut,
+    OpsReadinessOut,
     RetentionCleanupOut,
     PushRecordOut,
     RetentionMetricOut,
@@ -85,6 +86,34 @@ def ops_health(db: Session = Depends(get_db)) -> OpsHealthOut:
         source_error_count_24h=source_error_count,
         real_field_ratio_24h=real_fields / total_fields if total_fields else 0,
         worker_lag_minutes=worker_lag,
+    )
+
+
+@router.get("/ops/readiness", response_model=OpsReadinessOut)
+def ops_readiness(db: Session = Depends(get_db)) -> OpsReadinessOut:
+    runs = db.query(CollectRunLog).order_by(CollectRunLog.started_at.asc()).all()
+    first_run = runs[0] if runs else None
+    latest_run = runs[-1] if runs else None
+    observed_days = 0.0
+    if first_run and latest_run:
+        observed_days = max((latest_run.started_at - first_run.started_at).total_seconds() / 86400, 0)
+    monitored_item_count = db.query(Item).filter_by(is_active=True).count()
+    snapshot_item_ids = {row[0] for row in db.query(MarketSnapshot.item_id).distinct().all()}
+    items_with_snapshots = db.query(Item).filter(Item.is_active.is_(True), Item.id.in_(snapshot_item_ids)).count() if snapshot_item_ids else 0
+    success_run_count = sum(1 for run in runs if run.status == "success")
+    collect_success_rate = success_run_count / len(runs) if runs else 0
+    snapshot_coverage_rate = items_with_snapshots / monitored_item_count if monitored_item_count else 0
+    return OpsReadinessOut(
+        ready_for_7d_review=observed_days >= 7 and collect_success_rate >= 0.8 and snapshot_coverage_rate >= 0.8,
+        observed_days=observed_days,
+        collect_run_count=len(runs),
+        success_run_count=success_run_count,
+        collect_success_rate=collect_success_rate,
+        monitored_item_count=monitored_item_count,
+        items_with_snapshots=items_with_snapshots,
+        snapshot_coverage_rate=snapshot_coverage_rate,
+        snapshot_count=db.query(MarketSnapshot).count(),
+        latest_run_at=latest_run.finished_at or latest_run.started_at if latest_run else None,
     )
 
 

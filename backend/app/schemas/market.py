@@ -339,6 +339,19 @@ class OpsHealthOut(BaseModel):
     worker_lag_minutes: float | None
 
 
+class OpsReadinessOut(BaseModel):
+    ready_for_7d_review: bool
+    observed_days: float
+    collect_run_count: int
+    success_run_count: int
+    collect_success_rate: float
+    monitored_item_count: int
+    items_with_snapshots: int
+    snapshot_coverage_rate: float
+    snapshot_count: int
+    latest_run_at: datetime | None
+
+
 class RetentionMetricOut(BaseModel):
     name: str
     retention_days: int | None

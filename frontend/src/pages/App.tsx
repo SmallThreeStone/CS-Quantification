@@ -19,6 +19,7 @@ import type {
   MonitorPoolInput,
   MonitorItem,
   OpsHealth,
+  OpsReadiness,
   PushRecord,
   Retention,
   StrategyConfig,
@@ -39,6 +40,7 @@ export default function App() {
   const [alertFilters, setAlertFilters] = useState<AlertFilters>({});
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
+  const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
   const [retention, setRetention] = useState<Retention | null>(null);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
@@ -60,6 +62,7 @@ export default function App() {
         nextAlerts,
         nextPushRecords,
         nextOpsHealth,
+        nextOpsReadiness,
         nextRetention,
         nextBacktests,
         nextBacktestSummary,
@@ -73,6 +76,7 @@ export default function App() {
         api.alerts(alertFilters),
         api.pushRecords(),
         api.opsHealth(),
+        api.opsReadiness(),
         api.retention(),
         api.backtests(),
         api.backtestSummary(),
@@ -86,6 +90,7 @@ export default function App() {
       setAlerts(nextAlerts);
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
+      setOpsReadiness(nextOpsReadiness);
       setRetention(nextRetention);
       setBacktests(nextBacktests);
       setBacktestSummary(nextBacktestSummary);
@@ -215,6 +220,7 @@ export default function App() {
             pushRecords={pushRecords}
             collectRuns={collectRuns}
             opsHealth={opsHealth}
+            opsReadiness={opsReadiness}
             retention={retention}
           />
         )}
@@ -1310,6 +1316,7 @@ function SourceView({
   pushRecords,
   collectRuns,
   opsHealth,
+  opsReadiness,
   retention
 }: {
   items: MonitorItem[];
@@ -1318,6 +1325,7 @@ function SourceView({
   pushRecords: PushRecord[];
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
+  opsReadiness: OpsReadiness | null;
   retention: Retention | null;
 }) {
   const hasSnapshots = items.some((item) => item.latest_snapshot);
@@ -1347,6 +1355,10 @@ function SourceView({
         <Metric label="真实字段占比" value={opsHealth ? formatPercent(opsHealth.real_field_ratio_24h) : latestRun ? formatPercent(qualityRatio) : "暂无"} tone={(opsHealth?.real_field_ratio_24h ?? qualityRatio) > 0.5 ? "up" : "neutral"} />
         <Metric label="补位次数" value={latestRun ? `${latestRun.fallback_count} 次` : "暂无"} />
         <Metric label="最近推送" value={latestPush ? `${latestPush.channel}:${latestPush.status}` : "暂无"} />
+        <Metric label="P0 观察天数" value={opsReadiness ? `${opsReadiness.observed_days.toFixed(1)} 天` : "暂无"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
+        <Metric label="P0 采集轮次" value={opsReadiness ? `${opsReadiness.success_run_count}/${opsReadiness.collect_run_count}` : "暂无"} tone={opsReadiness && opsReadiness.collect_success_rate >= 0.8 ? "up" : "neutral"} />
+        <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
+        <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
       </div>
       <div className="push-table">

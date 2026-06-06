@@ -163,6 +163,19 @@ export type OpsHealth = {
   worker_lag_minutes: number | null;
 };
 
+export type OpsReadiness = {
+  ready_for_7d_review: boolean;
+  observed_days: number;
+  collect_run_count: number;
+  success_run_count: number;
+  collect_success_rate: number;
+  monitored_item_count: number;
+  items_with_snapshots: number;
+  snapshot_coverage_rate: number;
+  snapshot_count: number;
+  latest_run_at: string | null;
+};
+
 export type RetentionMetric = {
   name: string;
   retention_days: number | null;

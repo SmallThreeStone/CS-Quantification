@@ -10,6 +10,7 @@ import type {
   MonitorPoolInput,
   MonitorItem,
   OpsHealth,
+  OpsReadiness,
   PushRecord,
   Retention,
   RetentionCleanup,
@@ -54,6 +55,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<{ status: string; service: string; version: string }>("/api/health"),
   opsHealth: () => request<OpsHealth>("/api/ops/health"),
+  opsReadiness: () => request<OpsReadiness>("/api/ops/readiness"),
   retention: () => request<Retention>("/api/retention"),
   cleanupRetention: () => request<RetentionCleanup>("/api/retention/cleanup", { method: "POST" }),
   collect: () => request<Alert[]>("/api/collect", { method: "POST" }),
