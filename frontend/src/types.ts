@@ -176,6 +176,19 @@ export type OpsReadiness = {
   latest_run_at: string | null;
 };
 
+export type FieldQuality = {
+  field: string;
+  label: string;
+  real_count: number;
+  fallback_count: number;
+  real_ratio: number;
+};
+
+export type SourceFieldQuality = {
+  snapshot_sample_count: number;
+  fields: FieldQuality[];
+};
+
 export type RetentionMetric = {
   name: string;
   retention_days: number | null;

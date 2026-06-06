@@ -14,6 +14,7 @@ import type {
   PushRecord,
   Retention,
   RetentionCleanup,
+  SourceFieldQuality,
   StrategyConfig,
   StrategyConfigUpdate,
   TuningSuggestion
@@ -56,6 +57,7 @@ export const api = {
   health: () => request<{ status: string; service: string; version: string }>("/api/health"),
   opsHealth: () => request<OpsHealth>("/api/ops/health"),
   opsReadiness: () => request<OpsReadiness>("/api/ops/readiness"),
+  sourceFieldQuality: () => request<SourceFieldQuality>("/api/source/field-quality"),
   retention: () => request<Retention>("/api/retention"),
   cleanupRetention: () => request<RetentionCleanup>("/api/retention/cleanup", { method: "POST" }),
   collect: () => request<Alert[]>("/api/collect", { method: "POST" }),

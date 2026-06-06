@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 
 from fastapi.testclient import TestClient
@@ -151,6 +152,55 @@ def test_ops_readiness_marks_seven_day_collection_ready(db_session):
     assert body["collect_run_count"] == 9
     assert body["collect_success_rate"] == 1
     assert body["snapshot_coverage_rate"] == 1
+
+
+def test_source_field_quality_counts_real_and_fallback_fields(db_session):
+    platform = Platform(code="steam", name="Steam")
+    item = Item(market_hash_name="field-quality", display_name="Field Quality")
+    db_session.add_all([platform, item])
+    db_session.flush()
+    first_payload = {
+        "source_quality": {
+            "real_fields": ["lowest_price", "volume_24h", "avg_price_24h"],
+            "fallback_fields": ["sell_count", "highest_buy_price", "buy_count"],
+        }
+    }
+    second_payload = {
+        "source_quality": {
+            "real_fields": ["sell_count", "highest_buy_price", "buy_count"],
+            "fallback_fields": ["lowest_price", "volume_24h", "avg_price_24h"],
+        }
+    }
+    for raw_payload in [first_payload, second_payload, {}]:
+        db_session.add(
+            MarketSnapshot(
+                item_id=item.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=90,
+                buy_count=5,
+                volume_24h=2,
+                avg_price_24h=98,
+                raw_payload=json.dumps(raw_payload),
+            )
+        )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/source/field-quality")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    fields = {field["field"]: field for field in body["fields"]}
+    assert body["snapshot_sample_count"] == 3
+    assert fields["lowest_price"]["real_count"] == 1
+    assert fields["lowest_price"]["fallback_count"] == 2
+    assert fields["sell_count"]["real_count"] == 1
+    assert fields["sell_count"]["fallback_count"] == 2
+    assert fields["volume_24h"]["real_ratio"] == 1 / 3
 
 
 def create_ops_fixture(db_session) -> Alert:

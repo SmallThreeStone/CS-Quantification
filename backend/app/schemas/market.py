@@ -352,6 +352,19 @@ class OpsReadinessOut(BaseModel):
     latest_run_at: datetime | None
 
 
+class FieldQualityOut(BaseModel):
+    field: str
+    label: str
+    real_count: int
+    fallback_count: int
+    real_ratio: float
+
+
+class SourceFieldQualityOut(BaseModel):
+    snapshot_sample_count: int
+    fields: list[FieldQualityOut]
+
+
 class RetentionMetricOut(BaseModel):
     name: str
     retention_days: int | None

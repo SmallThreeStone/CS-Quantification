@@ -22,6 +22,7 @@ import type {
   OpsReadiness,
   PushRecord,
   Retention,
+  SourceFieldQuality,
   StrategyConfig,
   StrategyConfigUpdate,
   TuningSuggestion
@@ -41,6 +42,7 @@ export default function App() {
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
+  const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
   const [retention, setRetention] = useState<Retention | null>(null);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
@@ -63,6 +65,7 @@ export default function App() {
         nextPushRecords,
         nextOpsHealth,
         nextOpsReadiness,
+        nextSourceFieldQuality,
         nextRetention,
         nextBacktests,
         nextBacktestSummary,
@@ -77,6 +80,7 @@ export default function App() {
         api.pushRecords(),
         api.opsHealth(),
         api.opsReadiness(),
+        api.sourceFieldQuality(),
         api.retention(),
         api.backtests(),
         api.backtestSummary(),
@@ -91,6 +95,7 @@ export default function App() {
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
       setOpsReadiness(nextOpsReadiness);
+      setSourceFieldQuality(nextSourceFieldQuality);
       setRetention(nextRetention);
       setBacktests(nextBacktests);
       setBacktestSummary(nextBacktestSummary);
@@ -221,6 +226,7 @@ export default function App() {
             collectRuns={collectRuns}
             opsHealth={opsHealth}
             opsReadiness={opsReadiness}
+            sourceFieldQuality={sourceFieldQuality}
             retention={retention}
           />
         )}
@@ -1317,6 +1323,7 @@ function SourceView({
   collectRuns,
   opsHealth,
   opsReadiness,
+  sourceFieldQuality,
   retention
 }: {
   items: MonitorItem[];
@@ -1326,6 +1333,7 @@ function SourceView({
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
   opsReadiness: OpsReadiness | null;
+  sourceFieldQuality: SourceFieldQuality | null;
   retention: Retention | null;
 }) {
   const hasSnapshots = items.some((item) => item.latest_snapshot);
@@ -1360,6 +1368,22 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>字段真实率</h3>
+        {sourceFieldQuality ? (
+          sourceFieldQuality.fields.map((field) => (
+            <div className="push-row" key={field.field}>
+              <span>{field.label}</span>
+              <strong>{formatPercent(field.real_ratio)}</strong>
+              <span>真实 {field.real_count}</span>
+              <span>补位 {field.fallback_count}</span>
+              <span>样本 {sourceFieldQuality.snapshot_sample_count}</span>
+            </div>
+          ))
+        ) : (
+          <div className="empty">暂无字段质量数据</div>
+        )}
       </div>
       <div className="push-table">
         <h3>低可信饰品</h3>

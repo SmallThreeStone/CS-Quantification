@@ -34,10 +34,12 @@ from app.schemas.market import (
     OpsReadinessOut,
     RetentionCleanupOut,
     PushRecordOut,
+    SourceFieldQualityOut,
     RetentionMetricOut,
     RetentionOut,
     SnapshotOut,
     SourceQualityOut,
+    FieldQualityOut,
     StrategyConfigOut,
     StrategyConfigUpdate,
     TuningSuggestionOut,
@@ -51,6 +53,14 @@ from app.services.steam_nameid_service import SteamNameIdService
 router = APIRouter()
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
+SOURCE_FIELDS = [
+    ("lowest_price", "底价"),
+    ("sell_count", "在售"),
+    ("highest_buy_price", "最高求购"),
+    ("buy_count", "求购"),
+    ("volume_24h", "24h 成交"),
+    ("avg_price_24h", "24h 均价"),
+]
 
 
 @router.get("/health", response_model=HealthOut)
@@ -114,6 +124,38 @@ def ops_readiness(db: Session = Depends(get_db)) -> OpsReadinessOut:
         snapshot_coverage_rate=snapshot_coverage_rate,
         snapshot_count=db.query(MarketSnapshot).count(),
         latest_run_at=latest_run.finished_at or latest_run.started_at if latest_run else None,
+    )
+
+
+@router.get("/source/field-quality", response_model=SourceFieldQualityOut)
+def source_field_quality(limit: int = Query(default=500, ge=1, le=5000), db: Session = Depends(get_db)) -> SourceFieldQualityOut:
+    snapshots = db.query(MarketSnapshot).order_by(MarketSnapshot.captured_at.desc()).limit(limit).all()
+    stats = {field: {"real": 0, "fallback": 0} for field, _ in SOURCE_FIELDS}
+    for snapshot in snapshots:
+        quality = _source_quality(snapshot)
+        if quality is None:
+            for field, _ in SOURCE_FIELDS:
+                stats[field]["fallback"] += 1
+            continue
+        real_fields = set(quality.real_fields)
+        fallback_fields = set(quality.fallback_fields)
+        for field, _ in SOURCE_FIELDS:
+            if field in real_fields:
+                stats[field]["real"] += 1
+            elif field in fallback_fields or not real_fields:
+                stats[field]["fallback"] += 1
+    return SourceFieldQualityOut(
+        snapshot_sample_count=len(snapshots),
+        fields=[
+            FieldQualityOut(
+                field=field,
+                label=label,
+                real_count=stats[field]["real"],
+                fallback_count=stats[field]["fallback"],
+                real_ratio=stats[field]["real"] / len(snapshots) if snapshots else 0,
+            )
+            for field, label in SOURCE_FIELDS
+        ],
     )
 
 
