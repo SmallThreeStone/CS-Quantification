@@ -46,3 +46,18 @@ def test_backup_config_shell_script_archives_env_compose_and_scripts():
     assert "zip -qr" in script
     assert '[ ! -s "$ARCHIVE_PATH" ]' in script
     assert "RETENTION_DAYS" in script
+
+
+def test_verify_deploy_shell_script_checks_core_endpoints_and_collect():
+    script = (ROOT / "scripts" / "verify_deploy.sh").read_text(encoding="utf-8")
+
+    assert "docker compose ps" in script
+    assert 'json_get "health" "/api/health"' in script
+    assert 'json_get "ops-health" "/api/ops/health"' in script
+    assert 'json_get "api-latency" "/api/ops/api-latency"' in script
+    assert 'json_get "db-write-volume" "/api/ops/db-write-volume"' in script
+    assert 'json_get "host-resources" "/api/ops/host-resources"' in script
+    assert 'json_get "backups" "/api/ops/backups"' in script
+    assert 'json_get "acceptance" "/api/ops/acceptance"' in script
+    assert 'json_post "collect" "/api/collect"' in script
+    assert 'curl -fsS -o /dev/null -w "status=%{http_code}\\n" "$BASE_URL"' in script

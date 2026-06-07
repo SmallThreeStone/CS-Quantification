@@ -250,6 +250,7 @@
    14. 实施进度：部署验证脚本已读取 `/api/ops/db-write-volume`，用于确认数据库近 24 小时写入量和最新写入时间。
    15. 实施进度：部署验证脚本已读取 `/api/ops/host-resources`，用于确认云服务器 CPU、内存和磁盘占用。
    16. 实施进度：部署验证脚本已读取 `/api/ops/backups`，用于确认数据库和配置备份脚本、最近备份文件和过期状态。
+   17. 实施进度：已增加 `scripts/verify_deploy.sh`，支持 OpenCloud OS 9 / Linux 云服务器通过 bash 巡检 Docker Compose、核心 API、前端首页和可选采集。
 9. 部署前备份数据库。
    1. 实施进度：已增加 `scripts/backup_postgres.ps1`，支持 Docker Compose PostgreSQL 生成 `.dump` 备份并清理过期备份。
    2. 实施进度：已增加 `scripts/backup_postgres.sh`，支持 OpenCloud OS 9 / Linux 云服务器通过 bash 执行 PostgreSQL 备份。
