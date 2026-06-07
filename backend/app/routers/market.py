@@ -10,6 +10,7 @@ from app.models import Alert, BacktestResult, CollectRunLog, Item, MarketSnapsho
 from app.models import StrategyConfig
 from app.schemas.market import (
     AlertOut,
+    AlertCoverageOut,
     BacktestResultOut,
     BacktestSignalOut,
     BacktestSummaryOut,
@@ -17,6 +18,7 @@ from app.schemas.market import (
     DecisionSignalOut,
     CategoryStrategyOut,
     AlertSummaryOut,
+    AlertTypeCoverageOut,
     HeatmapBucketOut,
     HealthOut,
     HistoryPointOut,
@@ -64,6 +66,7 @@ SOURCE_FIELDS = [
     ("volume_24h", "24h 成交"),
     ("avg_price_24h", "24h 均价"),
 ]
+EXPECTED_ALERT_TYPES = ["在售变化", "求购变化", "底价变化", "价格波动异常", "成交量异常"]
 
 
 @router.get("/health", response_model=HealthOut)
@@ -200,6 +203,31 @@ def _source_field_quality(db: Session, limit: int) -> SourceFieldQualityOut:
                 real_ratio=stats[field]["real"] / len(snapshots) if snapshots else 0,
             )
             for field, label in SOURCE_FIELDS
+        ],
+    )
+
+
+@router.get("/alerts/coverage", response_model=AlertCoverageOut)
+def alert_coverage(db: Session = Depends(get_db)) -> AlertCoverageOut:
+    alerts = db.query(Alert).order_by(Alert.created_at.desc()).all()
+    since = datetime.utcnow() - timedelta(hours=24)
+    traceable = 0
+    type_counts: dict[str, int] = {}
+    for alert in alerts:
+        type_counts[alert.alert_type] = type_counts.get(alert.alert_type, 0) + 1
+        if alert.snapshot is not None:
+            traceable += 1
+    return AlertCoverageOut(
+        total_count=len(alerts),
+        recent_24h_count=sum(1 for alert in alerts if alert.created_at >= since),
+        covered_type_count=sum(1 for alert_type in EXPECTED_ALERT_TYPES if type_counts.get(alert_type, 0) > 0),
+        expected_type_count=len(EXPECTED_ALERT_TYPES),
+        traceable_count=traceable,
+        traceable_rate=traceable / len(alerts) if alerts else 0,
+        latest_alert=_alert_out(alerts[0]) if alerts else None,
+        types=[
+            AlertTypeCoverageOut(alert_type=alert_type, count=type_counts.get(alert_type, 0))
+            for alert_type in EXPECTED_ALERT_TYPES
         ],
     )
 

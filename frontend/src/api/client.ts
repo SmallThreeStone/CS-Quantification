@@ -1,5 +1,6 @@
 import type {
   Alert,
+  AlertCoverage,
   BacktestResult,
   BacktestSummary,
   CollectRun,
@@ -68,6 +69,7 @@ export const api = {
   collectRuns: () => request<CollectRun[]>("/api/collect-runs"),
   monitor: () => request<MonitorItem[]>("/api/monitor"),
   alerts: (filters: AlertFilters = {}) => request<Alert[]>(queryPath("/api/alerts", filters)),
+  alertCoverage: () => request<AlertCoverage>("/api/alerts/coverage"),
   backtests: () => request<BacktestResult[]>("/api/backtests"),
   backtestSummary: () => request<BacktestSummary[]>("/api/backtests/summary"),
   tuningSuggestions: () => request<TuningSuggestion[]>("/api/backtests/tuning-suggestions"),

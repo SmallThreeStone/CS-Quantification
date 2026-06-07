@@ -75,6 +75,22 @@ class AlertOut(BaseModel):
     platform_name: str
 
 
+class AlertTypeCoverageOut(BaseModel):
+    alert_type: str
+    count: int
+
+
+class AlertCoverageOut(BaseModel):
+    total_count: int
+    recent_24h_count: int
+    covered_type_count: int
+    expected_type_count: int
+    traceable_count: int
+    traceable_rate: float
+    latest_alert: AlertOut | None
+    types: list[AlertTypeCoverageOut]
+
+
 class PushRecordOut(BaseModel):
     id: int
     alert_id: int

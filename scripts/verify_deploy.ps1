@@ -28,6 +28,9 @@ Show-Json "p0-summary" $p0Summary
 $sourceConfig = Invoke-RestMethod "$BaseUrl/api/source/config"
 Show-Json "source-config" $sourceConfig
 
+$alertCoverage = Invoke-RestMethod "$BaseUrl/api/alerts/coverage"
+Show-Json "alert-coverage" $alertCoverage
+
 $monitor = Invoke-RestMethod "$BaseUrl/api/monitor"
 Show-Json "monitor" @{ count = $monitor.Count }
 

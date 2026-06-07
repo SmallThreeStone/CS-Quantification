@@ -9,6 +9,7 @@ import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
 import type {
   Alert,
+  AlertCoverage,
   BacktestResult,
   BacktestSummary,
   CollectRun,
@@ -40,6 +41,7 @@ export default function App() {
   const [managedItems, setManagedItems] = useState<ManagedItem[]>([]);
   const [pools, setPools] = useState<MonitorPool[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alertCoverage, setAlertCoverage] = useState<AlertCoverage | null>(null);
   const [alertFilters, setAlertFilters] = useState<AlertFilters>({});
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
@@ -66,6 +68,7 @@ export default function App() {
         nextManagedItems,
         nextPools,
         nextAlerts,
+        nextAlertCoverage,
         nextPushRecords,
         nextOpsHealth,
         nextOpsReadiness,
@@ -83,6 +86,7 @@ export default function App() {
         api.items(),
         api.monitorPools(),
         api.alerts(alertFilters),
+        api.alertCoverage(),
         api.pushRecords(),
         api.opsHealth(),
         api.opsReadiness(),
@@ -100,6 +104,7 @@ export default function App() {
       setManagedItems(nextManagedItems);
       setPools(nextPools);
       setAlerts(nextAlerts);
+      setAlertCoverage(nextAlertCoverage);
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
       setOpsReadiness(nextOpsReadiness);
@@ -232,6 +237,7 @@ export default function App() {
             items={items}
             pools={pools}
             alerts={alerts}
+            alertCoverage={alertCoverage}
             pushRecords={pushRecords}
             collectRuns={collectRuns}
             opsHealth={opsHealth}
@@ -1331,6 +1337,7 @@ function SourceView({
   items,
   pools,
   alerts,
+  alertCoverage,
   pushRecords,
   collectRuns,
   opsHealth,
@@ -1343,6 +1350,7 @@ function SourceView({
   items: MonitorItem[];
   pools: MonitorPool[];
   alerts: Alert[];
+  alertCoverage: AlertCoverage | null;
   pushRecords: PushRecord[];
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
@@ -1406,6 +1414,28 @@ function SourceView({
           </>
         ) : (
           <div className="empty">暂无 P0 验证摘要</div>
+        )}
+      </div>
+      <div className="push-table">
+        <h3>告警覆盖</h3>
+        {alertCoverage ? (
+          <>
+            <div className="push-row">
+              <span>{alertCoverage.covered_type_count}/{alertCoverage.expected_type_count} 类型</span>
+              <strong>{formatPercent(alertCoverage.traceable_rate)}</strong>
+              <span>总计 {alertCoverage.total_count}</span>
+              <span>24h {alertCoverage.recent_24h_count}</span>
+              <span>{alertCoverage.latest_alert ? `最近 ${alertCoverage.latest_alert.alert_type}` : "暂无最近告警"}</span>
+            </div>
+            {alertCoverage.types.map((row) => (
+              <div className="push-row" key={row.alert_type}>
+                <span>{row.alert_type}</span>
+                <strong>{row.count} 条</strong>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无告警覆盖数据</div>
         )}
       </div>
       <div className="push-table">

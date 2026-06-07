@@ -65,6 +65,22 @@ export type Alert = {
   platform_name: string;
 };
 
+export type AlertTypeCoverage = {
+  alert_type: string;
+  count: number;
+};
+
+export type AlertCoverage = {
+  total_count: number;
+  recent_24h_count: number;
+  covered_type_count: number;
+  expected_type_count: number;
+  traceable_count: number;
+  traceable_rate: number;
+  latest_alert: Alert | null;
+  types: AlertTypeCoverage[];
+};
+
 export type PushRecord = {
   id: number;
   alert_id: number;
