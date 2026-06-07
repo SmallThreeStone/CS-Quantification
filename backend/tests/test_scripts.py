@@ -87,6 +87,20 @@ def test_check_firewall_shell_script_guards_internal_ports():
     assert "exposed beyond loopback" in script
 
 
+def test_configure_firewall_shell_script_allows_only_public_entrypoints():
+    script = (ROOT / "scripts" / "configure_firewall.sh").read_text(encoding="utf-8")
+
+    assert "configuring firewalld requires root" in script
+    assert "firewall-cmd" in script
+    assert "systemctl enable --now firewalld" in script
+    assert '--add-port="${SSH_PORT}/tcp"' in script
+    assert "--add-service=http" in script
+    assert "--add-service=https" in script
+    assert "for port in 5432 6379 8000" in script
+    assert '--remove-port="${port}/tcp"' in script
+    assert "bash scripts/check_firewall.sh" in script
+
+
 def test_install_backup_cron_script_installs_daily_backup_jobs():
     script = (ROOT / "scripts" / "install_backup_cron.sh").read_text(encoding="utf-8")
 

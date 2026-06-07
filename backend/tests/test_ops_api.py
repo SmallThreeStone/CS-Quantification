@@ -180,7 +180,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.68"
+    assert body["version"] == "0.1.69"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
