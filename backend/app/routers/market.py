@@ -78,7 +78,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.62"
+APP_VERSION = "0.1.63"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 API_LATENCY_WINDOW_MINUTES = 15
@@ -608,7 +608,7 @@ def ops_backups() -> BackupStatusOut:
             root=root,
             key="postgres",
             label="数据库备份",
-            script_path=Path("scripts/backup_postgres.ps1"),
+            script_paths=[Path("scripts/backup_postgres.ps1"), Path("scripts/backup_postgres.sh")],
             backup_dir=Path("backups/postgres"),
             pattern="*.dump",
             retention_days=POSTGRES_BACKUP_RETENTION_DAYS,
@@ -617,7 +617,7 @@ def ops_backups() -> BackupStatusOut:
             root=root,
             key="config",
             label="配置备份",
-            script_path=Path("scripts/backup_config.ps1"),
+            script_paths=[Path("scripts/backup_config.ps1"), Path("scripts/backup_config.sh")],
             backup_dir=Path("backups/config"),
             pattern="*.zip",
             retention_days=CONFIG_BACKUP_RETENTION_DAYS,
@@ -1413,12 +1413,13 @@ def _backup_status_metric(
     root: Path,
     key: str,
     label: str,
-    script_path: Path,
+    script_paths: list[Path],
     backup_dir: Path,
     pattern: str,
     retention_days: int,
 ) -> BackupStatusMetricOut:
-    script = root / script_path
+    scripts = [root / script_path for script_path in script_paths]
+    script_exists = any(script.exists() for script in scripts)
     directory = root / backup_dir
     files = sorted((file for file in directory.glob(pattern) if file.is_file()), key=lambda file: file.stat().st_mtime, reverse=True) if directory.exists() else []
     latest = files[0] if files else None
@@ -1427,7 +1428,7 @@ def _backup_status_metric(
     stale_days = (datetime.utcnow() - latest_at).total_seconds() / 86400 if latest_at else None
     status = "ready"
     detail = "最近备份文件非空且未超过保留窗口"
-    if not script.exists():
+    if not script_exists:
         status = "fail"
         detail = "备份脚本缺失，无法执行上线前备份"
     elif latest is None:
@@ -1443,7 +1444,7 @@ def _backup_status_metric(
         key=key,
         label=label,
         status=status,
-        script_exists=script.exists(),
+        script_exists=script_exists,
         directory_exists=directory.exists(),
         file_count=len(files),
         latest_file=latest.name if latest else None,

@@ -180,7 +180,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.62"
+    assert body["version"] == "0.1.63"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -862,5 +862,5 @@ def create_ops_fixture(db_session) -> Alert:
 def create_backup_scripts(root: Path) -> None:
     scripts = root / "scripts"
     scripts.mkdir(parents=True)
-    (scripts / "backup_postgres.ps1").write_text("postgres backup", encoding="utf-8")
-    (scripts / "backup_config.ps1").write_text("config backup", encoding="utf-8")
+    (scripts / "backup_postgres.sh").write_text("postgres backup", encoding="utf-8")
+    (scripts / "backup_config.sh").write_text("config backup", encoding="utf-8")

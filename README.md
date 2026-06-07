@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.62 — 增加备份状态巡检
+V0.1.63 — 增加 Linux 备份脚本
 
 ## 功能范围
 
@@ -46,7 +46,7 @@ V0.1.62 — 增加备份状态巡检
 - API 响应时间：展示近 15 分钟请求数、平均耗时、P95、慢请求和 5xx 错误数量
 - 数据库写入量：展示近 24 小时行情快照、告警、推送、回测和采集日志写入量、总行数和最新写入时间
 - 主机资源巡检：展示 CPU、内存和磁盘占用，辅助云服务器部署后判断资源压力
-- 备份状态巡检：展示数据库备份和配置备份脚本、最近文件、大小、时间和过期状态
+- 备份状态巡检：展示数据库备份和配置备份脚本、最近文件、大小、时间和过期状态，支持 Linux `.sh` 与 Windows PowerShell 脚本
 - P0 就绪度：展示观察天数、采集轮次、快照覆盖率和 7 天复盘状态
 - P0 验证摘要：聚合数据源配置、连续采集、字段真实率、告警数量、阻塞项和复盘检查项
 - 数据保留：数据源状态页展示行情快照、告警、回测和采集日志的保留策略、当前数据量和最早记录时间，支持清理过期快照与采集日志
@@ -133,6 +133,13 @@ docker compose up -d --build
 .\scripts\backup_postgres.ps1 -BackupDir ./backups/postgres -RetentionDays 14
 ```
 
+OpenCloud OS 9 / Linux 云服务器优先使用：
+
+```bash
+bash scripts/backup_postgres.sh
+bash scripts/backup_postgres.sh --backup-dir ./backups/postgres --retention-days 14
+```
+
 备份脚本通过 Docker Compose 调用 `postgres` 服务内的 `pg_dump`，生成带时间戳的 `.dump` 文件，并按保留天数清理旧备份。
 
 ### 配置备份
@@ -140,6 +147,13 @@ docker compose up -d --build
 ```powershell
 .\scripts\backup_config.ps1
 .\scripts\backup_config.ps1 -BackupDir ./backups/config -RetentionDays 30
+```
+
+OpenCloud OS 9 / Linux 云服务器优先使用：
+
+```bash
+bash scripts/backup_config.sh
+bash scripts/backup_config.sh --backup-dir ./backups/config --retention-days 30
 ```
 
 配置备份会打包 `.env`、`.env.example`、`docker-compose.yml`、`README.md`、`CLAUDE.md` 和 `scripts/`，生成带时间戳的 `.zip` 文件。
@@ -205,6 +219,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.63 — 增加 Linux 备份脚本，支持 OpenCloud OS 9 通过 bash 执行数据库和配置备份。
 - V0.1.62 — 增加备份状态巡检，展示数据库/配置备份脚本、最近备份文件、大小、时间和过期状态。
 - V0.1.61 — 增加主机资源巡检，展示 CPU、内存、磁盘占用并纳入部署验证脚本。
 - V0.1.60 — 增加数据库写入量监控，展示近 24 小时写入量、总行数和最新写入时间。

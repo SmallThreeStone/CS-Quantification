@@ -14,6 +14,16 @@ def test_backup_postgres_script_uses_compose_dump_and_retention():
     assert "Remove-Item -Force" in script
 
 
+def test_backup_postgres_shell_script_uses_compose_dump_and_retention():
+    script = (ROOT / "scripts" / "backup_postgres.sh").read_text(encoding="utf-8")
+
+    assert 'docker compose -f "$COMPOSE_FILE" exec -T postgres pg_dump' in script
+    assert "-F c" in script
+    assert '[ ! -s "$BACKUP_PATH" ]' in script
+    assert "RETENTION_DAYS" in script
+    assert 'find "$BACKUP_DIR" -type f -name "*.dump"' in script
+
+
 def test_backup_config_script_archives_env_compose_and_scripts():
     script = (ROOT / "scripts" / "backup_config.ps1").read_text(encoding="utf-8")
 
@@ -24,3 +34,15 @@ def test_backup_config_script_archives_env_compose_and_scripts():
     assert "Compress-Archive" in script
     assert "if ($file.Length -le 0)" in script
     assert "RetentionDays" in script
+
+
+def test_backup_config_shell_script_archives_env_compose_and_scripts():
+    script = (ROOT / "scripts" / "backup_config.sh").read_text(encoding="utf-8")
+
+    assert '".env"' in script
+    assert '"docker-compose.yml"' in script
+    assert '"CLAUDE.md"' in script
+    assert '[ -d "scripts" ]' in script
+    assert "zip -qr" in script
+    assert '[ ! -s "$ARCHIVE_PATH" ]' in script
+    assert "RETENTION_DAYS" in script

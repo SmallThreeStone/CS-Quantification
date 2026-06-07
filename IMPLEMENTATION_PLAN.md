@@ -252,6 +252,7 @@
    16. 实施进度：部署验证脚本已读取 `/api/ops/backups`，用于确认数据库和配置备份脚本、最近备份文件和过期状态。
 9. 部署前备份数据库。
    1. 实施进度：已增加 `scripts/backup_postgres.ps1`，支持 Docker Compose PostgreSQL 生成 `.dump` 备份并清理过期备份。
+   2. 实施进度：已增加 `scripts/backup_postgres.sh`，支持 OpenCloud OS 9 / Linux 云服务器通过 bash 执行 PostgreSQL 备份。
 
 ### 3. 运维监控
 
@@ -281,9 +282,11 @@
 1. 数据库每日备份。
    1. 实施进度：已增加 PostgreSQL 备份脚本，后续云服务器部署时可接入 cron/systemd timer 做每日备份。
    2. 实施进度：已增加 `/api/ops/backups`，可巡检数据库备份脚本是否存在、最近 `.dump` 文件是否非空以及是否超过 14 天保留窗口。
+   3. 实施进度：已增加 Linux 版 `backup_postgres.sh`，云服务器可直接接入 cron 或 systemd timer。
 2. 重要配置单独备份。
    1. 实施进度：已增加 `scripts/backup_config.ps1`，支持打包 `.env`、Compose、项目说明和部署脚本，并清理过期配置备份。
    2. 实施进度：已增加 `/api/ops/backups`，可巡检配置备份脚本是否存在、最近 `.zip` 文件是否非空以及是否超过 30 天保留窗口。
+   3. 实施进度：已增加 Linux 版 `backup_config.sh`，云服务器可直接备份 `.env`、Compose、说明文档和脚本目录。
 3. 原始行情至少保存 3-6 个月。
    1. 实施进度：已增加 `/api/retention`，展示行情快照 180 天保留策略、当前数量和最早记录时间。
    2. 实施进度：数据源状态页已展示行情快照保留策略，便于部署后巡检数据留存情况。
