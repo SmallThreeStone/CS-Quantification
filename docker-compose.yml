@@ -35,6 +35,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:5173}
       MARKET_PROVIDER: ${MARKET_PROVIDER:-mock}
+      STEAM_ORDERBOOK_ENABLED: ${STEAM_ORDERBOOK_ENABLED:-false}
+      STEAM_ORDERBOOK_ITEM_NAMEIDS: ${STEAM_ORDERBOOK_ITEM_NAMEIDS:-{}}
       PUSH_CHANNEL: ${PUSH_CHANNEL:-none}
       WECHAT_WEBHOOK_URL: ${WECHAT_WEBHOOK_URL:-}
       QQ_WEBHOOK_URL: ${QQ_WEBHOOK_URL:-}
@@ -59,6 +61,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
       MARKET_PROVIDER: ${MARKET_PROVIDER:-mock}
+      STEAM_ORDERBOOK_ENABLED: ${STEAM_ORDERBOOK_ENABLED:-false}
+      STEAM_ORDERBOOK_ITEM_NAMEIDS: ${STEAM_ORDERBOOK_ITEM_NAMEIDS:-{}}
       PUSH_CHANNEL: ${PUSH_CHANNEL:-none}
       WECHAT_WEBHOOK_URL: ${WECHAT_WEBHOOK_URL:-}
       QQ_WEBHOOK_URL: ${QQ_WEBHOOK_URL:-}

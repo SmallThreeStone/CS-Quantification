@@ -218,6 +218,7 @@
 1. 初始化服务器环境。
 2. 配置 Docker 和 Docker Compose。
    1. 实施进度：已增强 Docker Compose 健康检查、重启策略和环境变量模板。
+   2. 实施进度：Docker Compose 已向 backend 和 worker 透传 Steam 订单簿环境变量，保证云服务器可启用买卖盘深度采集。
 3. 部署数据库与 Redis。
    1. 实施进度：已增加数据库迁移启动器，支持全新数据库初始化和早期 MVP 表结构纳入迁移版本管理。
 4. 部署后端 API。

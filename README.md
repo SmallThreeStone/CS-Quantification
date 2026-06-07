@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.49 — 增加告警覆盖摘要
+V0.1.50 — 补齐订单簿容器环境变量
 
 ## 功能范围
 
@@ -41,7 +41,7 @@ V0.1.49 — 增加告警覆盖摘要
 - 数据保留：数据源状态页展示行情快照、告警、回测和采集日志的保留策略、当前数据量和最早记录时间，支持清理过期快照与采集日志
 - 饰品数据可信度：监控列表展示真实字段占比，数据源页列出低可信饰品
 - 数据库迁移：Alembic 基线迁移，后端容器启动前自动执行迁移
-- Docker Compose：frontend、backend、worker、postgres、redis
+- Docker Compose：frontend、backend、worker、postgres、redis，backend / worker 透传 Steam 订单簿配置
 
 ## 环境变量
 
@@ -183,6 +183,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.50 — 补齐 Docker Compose 中 backend 和 worker 的 Steam 订单簿环境变量透传。
 - V0.1.49 — 增加告警覆盖摘要，展示告警类型覆盖、近 24h 告警、可追溯快照比例和最近告警。
 - V0.1.48 — 增加 P0 验证摘要，聚合数据源配置、连续采集、字段真实率、告警数量、阻塞项和复盘检查项。
 - V0.1.47 — 增加数据源配置检查，展示 provider、订单簿开关、Steam NameID 覆盖率和配置建议。
