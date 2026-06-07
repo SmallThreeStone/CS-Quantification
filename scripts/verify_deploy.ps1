@@ -19,6 +19,9 @@ Show-Json "health" $health
 $opsHealth = Invoke-RestMethod "$BaseUrl/api/ops/health"
 Show-Json "ops-health" $opsHealth
 
+$apiLatency = Invoke-RestMethod "$BaseUrl/api/ops/api-latency"
+Show-Json "api-latency" $apiLatency
+
 $opsReadiness = Invoke-RestMethod "$BaseUrl/api/ops/readiness"
 Show-Json "ops-readiness" $opsReadiness
 

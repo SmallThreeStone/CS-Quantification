@@ -1,5 +1,6 @@
 import type {
   Acceptance,
+  ApiLatency,
   Alert,
   AlertCoverage,
   BacktestResult,
@@ -65,6 +66,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<{ status: string; service: string; version: string }>("/api/health"),
   opsHealth: () => request<OpsHealth>("/api/ops/health"),
+  opsApiLatency: () => request<ApiLatency>("/api/ops/api-latency"),
   opsReadiness: () => request<OpsReadiness>("/api/ops/readiness"),
   opsRuntime: () => request<RuntimeConfig>("/api/ops/runtime"),
   opsRuntimeAudit: () => request<RuntimeAudit>("/api/ops/runtime-audit"),

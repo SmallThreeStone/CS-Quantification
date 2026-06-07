@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from app.models import StrategyConfig
 from app.schemas.market import (
     AlertOut,
     AlertCoverageOut,
+    ApiLatencyOut,
     AcceptanceItemOut,
     AcceptanceOut,
     BacktestResultOut,
@@ -61,15 +63,18 @@ from app.schemas.market import (
     TuningSuggestionOut,
 )
 from app.services.market_service import MarketService
+from app.services.api_metrics import api_metrics_store
 from app.services.backtest_service import BacktestService
 from app.services.push_service import PushService
 from app.services.score_service import decision_from_scores, score_from_snapshot, status_from_alert
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.58"
+APP_VERSION = "0.1.59"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
+API_LATENCY_WINDOW_MINUTES = 15
+API_SLOW_REQUEST_MS = 1000
 SOURCE_FIELDS = [
     ("lowest_price", "底价"),
     ("sell_count", "在售"),
@@ -137,6 +142,44 @@ def ops_health(db: Session = Depends(get_db)) -> OpsHealthOut:
         source_error_count_24h=source_error_count,
         real_field_ratio_24h=real_fields / total_fields if total_fields else 0,
         worker_lag_minutes=worker_lag,
+    )
+
+
+@router.get("/ops/api-latency", response_model=ApiLatencyOut)
+def ops_api_latency() -> ApiLatencyOut:
+    samples = api_metrics_store.recent(API_LATENCY_WINDOW_MINUTES)
+    if not samples:
+        return ApiLatencyOut(
+            status="warn",
+            window_minutes=API_LATENCY_WINDOW_MINUTES,
+            request_count=0,
+            avg_latency_ms=0,
+            p95_latency_ms=0,
+            max_latency_ms=0,
+            slow_request_count=0,
+            error_count=0,
+            latest_path=None,
+            latest_status_code=None,
+            latest_at=None,
+        )
+    durations = sorted(sample.duration_ms for sample in samples)
+    latest = max(samples, key=lambda sample: sample.created_at)
+    slow_count = sum(1 for sample in samples if sample.duration_ms >= API_SLOW_REQUEST_MS)
+    error_count = sum(1 for sample in samples if sample.status_code >= 500)
+    p95_index = min(max(ceil(len(durations) * 0.95) - 1, 0), len(durations) - 1)
+    status = "fail" if error_count else "warn" if slow_count else "ok"
+    return ApiLatencyOut(
+        status=status,
+        window_minutes=API_LATENCY_WINDOW_MINUTES,
+        request_count=len(samples),
+        avg_latency_ms=round(sum(durations) / len(durations), 2),
+        p95_latency_ms=round(durations[p95_index], 2),
+        max_latency_ms=round(durations[-1], 2),
+        slow_request_count=slow_count,
+        error_count=error_count,
+        latest_path=latest.path,
+        latest_status_code=latest.status_code,
+        latest_at=latest.created_at,
     )
 
 

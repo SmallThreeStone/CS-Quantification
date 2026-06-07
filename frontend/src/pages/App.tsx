@@ -9,6 +9,7 @@ import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
 import type {
   Acceptance,
+  ApiLatency,
   Alert,
   AlertCoverage,
   BacktestResult,
@@ -52,6 +53,7 @@ export default function App() {
   const [alertFilters, setAlertFilters] = useState<AlertFilters>({});
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
+  const [apiLatency, setApiLatency] = useState<ApiLatency | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   const [runtimeAudit, setRuntimeAudit] = useState<RuntimeAudit | null>(null);
@@ -84,6 +86,7 @@ export default function App() {
         nextAlertCoverage,
         nextPushRecords,
         nextOpsHealth,
+        nextApiLatency,
         nextOpsReadiness,
         nextRuntimeConfig,
         nextRuntimeAudit,
@@ -108,6 +111,7 @@ export default function App() {
         api.alertCoverage(),
         api.pushRecords(),
         api.opsHealth(),
+        api.opsApiLatency(),
         api.opsReadiness(),
         api.opsRuntime(),
         api.opsRuntimeAudit(),
@@ -132,6 +136,7 @@ export default function App() {
       setAlertCoverage(nextAlertCoverage);
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
+      setApiLatency(nextApiLatency);
       setOpsReadiness(nextOpsReadiness);
       setRuntimeConfig(nextRuntimeConfig);
       setRuntimeAudit(nextRuntimeAudit);
@@ -272,6 +277,7 @@ export default function App() {
             pushRecords={pushRecords}
             collectRuns={collectRuns}
             opsHealth={opsHealth}
+            apiLatency={apiLatency}
             opsReadiness={opsReadiness}
             runtimeConfig={runtimeConfig}
             runtimeAudit={runtimeAudit}
@@ -1378,6 +1384,7 @@ function SourceView({
   pushRecords,
   collectRuns,
   opsHealth,
+  apiLatency,
   opsReadiness,
   runtimeConfig,
   runtimeAudit,
@@ -1397,6 +1404,7 @@ function SourceView({
   pushRecords: PushRecord[];
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
+  apiLatency: ApiLatency | null;
   opsReadiness: OpsReadiness | null;
   runtimeConfig: RuntimeConfig | null;
   runtimeAudit: RuntimeAudit | null;
@@ -1433,6 +1441,10 @@ function SourceView({
         <Metric label="采集成功率" value={opsHealth ? formatPercent(opsHealth.collect_success_rate) : "暂无"} tone={opsHealth && opsHealth.collect_success_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="推送成功率" value={opsHealth ? formatPercent(opsHealth.push_success_rate) : "暂无"} tone={opsHealth && opsHealth.push_success_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="worker 延迟" value={opsHealth?.worker_lag_minutes == null ? "暂无" : `${opsHealth.worker_lag_minutes.toFixed(1)} 分钟`} tone={opsHealth?.status === "fail" ? "down" : "neutral"} />
+        <Metric label="API 平均耗时" value={apiLatency ? `${apiLatency.avg_latency_ms.toFixed(1)}ms` : "暂无"} tone={apiLatencyTone(apiLatency?.status)} />
+        <Metric label="API P95" value={apiLatency ? `${apiLatency.p95_latency_ms.toFixed(1)}ms` : "暂无"} tone={apiLatencyTone(apiLatency?.status)} />
+        <Metric label="API 请求数" value={apiLatency ? `${apiLatency.request_count}/${apiLatency.window_minutes}分钟` : "暂无"} />
+        <Metric label="API 慢/错" value={apiLatency ? `${apiLatency.slow_request_count}/${apiLatency.error_count}` : "暂无"} tone={apiLatencyTone(apiLatency?.status)} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="24h 快照" value={opsHealth ? `${opsHealth.snapshot_count_24h} 条` : "暂无"} />
         <Metric label="24h 告警" value={opsHealth ? `${opsHealth.alert_count_24h} 条` : "暂无"} />
@@ -1837,6 +1849,16 @@ function opsStatusText(status: string) {
 }
 
 function opsTone(status?: string) {
+  if (status === "ok") {
+    return "up";
+  }
+  if (status === "fail") {
+    return "down";
+  }
+  return "neutral";
+}
+
+function apiLatencyTone(status?: string) {
   if (status === "ok") {
     return "up";
   }

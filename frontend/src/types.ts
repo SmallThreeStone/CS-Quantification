@@ -179,6 +179,20 @@ export type OpsHealth = {
   worker_lag_minutes: number | null;
 };
 
+export type ApiLatency = {
+  status: "ok" | "warn" | "fail";
+  window_minutes: number;
+  request_count: number;
+  avg_latency_ms: number;
+  p95_latency_ms: number;
+  max_latency_ms: number;
+  slow_request_count: number;
+  error_count: number;
+  latest_path: string | null;
+  latest_status_code: number | null;
+  latest_at: string | null;
+};
+
 export type OpsReadiness = {
   ready_for_7d_review: boolean;
   observed_days: number;

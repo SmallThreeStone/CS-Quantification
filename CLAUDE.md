@@ -117,7 +117,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.58 — 增加 MVP 范围摘要
+V0.1.59 — 增加 API 响应时间监控
 
 ## 环境要求
 

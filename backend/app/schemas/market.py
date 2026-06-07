@@ -445,6 +445,20 @@ class OpsHealthOut(BaseModel):
     worker_lag_minutes: float | None
 
 
+class ApiLatencyOut(BaseModel):
+    status: str
+    window_minutes: int
+    request_count: int
+    avg_latency_ms: float
+    p95_latency_ms: float
+    max_latency_ms: float
+    slow_request_count: int
+    error_count: int
+    latest_path: str | None
+    latest_status_code: int | None
+    latest_at: datetime | None
+
+
 class OpsReadinessOut(BaseModel):
     ready_for_7d_review: bool
     observed_days: float

@@ -7,6 +7,7 @@ from app.config import settings
 from app.database import get_db
 from app.main import app
 from app.models import Alert, BacktestResult, CollectRunLog, Item, MarketSnapshot, Platform, PushRecord, StrategyConfig
+from app.services.api_metrics import api_metrics_store
 from tests.test_strategy_api import override_session
 
 
@@ -93,6 +94,59 @@ def test_ops_health_fails_when_recent_runs_all_failed(db_session):
     assert response.json()["status"] == "fail"
 
 
+def test_ops_api_latency_reports_empty_window(db_session):
+    api_metrics_store.clear()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/api-latency")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "warn"
+    assert body["request_count"] == 0
+    assert body["latest_path"] is None
+
+
+def test_ops_api_latency_reports_recent_samples(db_session):
+    api_metrics_store.clear()
+    api_metrics_store.record("/api/health", "GET", 200, 10)
+    api_metrics_store.record("/api/monitor", "GET", 200, 20)
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/api-latency")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["request_count"] >= 2
+    assert body["avg_latency_ms"] >= 10
+    assert body["p95_latency_ms"] >= 20
+    assert body["max_latency_ms"] >= 20
+    assert body["slow_request_count"] == 0
+    assert body["error_count"] == 0
+
+
+def test_ops_api_latency_flags_slow_and_error_samples(db_session):
+    api_metrics_store.clear()
+    api_metrics_store.record("/api/slow", "GET", 200, 1200)
+    api_metrics_store.record("/api/error", "GET", 500, 30)
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/api-latency")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "fail"
+    assert body["slow_request_count"] >= 1
+    assert body["error_count"] >= 1
+
+
 def test_ops_runtime_reports_safe_runtime_config(db_session):
     previous_database_url = settings.database_url
     previous_provider = settings.market_provider
@@ -124,7 +178,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.58"
+    assert body["version"] == "0.1.59"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
