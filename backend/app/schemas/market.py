@@ -376,6 +376,17 @@ class SourceConfigOut(BaseModel):
     suggestion: str
 
 
+class P0SummaryOut(BaseModel):
+    ready: bool
+    status: str
+    blockers: list[str]
+    review_items: list[str]
+    readiness: OpsReadinessOut
+    source_config: SourceConfigOut
+    field_quality: SourceFieldQualityOut
+    alert_count: int
+
+
 class RetentionMetricOut(BaseModel):
     name: str
     retention_days: int | None

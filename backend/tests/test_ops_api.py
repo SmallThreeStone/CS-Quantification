@@ -253,6 +253,92 @@ def test_source_config_reports_orderbook_nameid_coverage(db_session):
     assert body["readiness"] == "partial"
 
 
+def test_p0_summary_reports_blockers_for_empty_state(db_session):
+    previous_provider = settings.market_provider
+    settings.market_provider = "mock"
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/ops/p0-summary")
+    finally:
+        settings.market_provider = previous_provider
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ready"] is False
+    assert body["status"] == "blocked"
+    assert body["blockers"]
+    assert body["source_config"]["readiness"] == "mock"
+
+
+def test_p0_summary_reports_ready_when_requirements_are_met(db_session):
+    previous_provider = settings.market_provider
+    previous_orderbook = settings.steam_orderbook_enabled
+    settings.market_provider = "steam"
+    settings.steam_orderbook_enabled = True
+    platform = Platform(code="steam", name="Steam")
+    items = [
+        Item(market_hash_name=f"ready-{index}", display_name=f"Ready {index}", steam_item_nameid=str(index), is_active=True)
+        for index in range(5)
+    ]
+    db_session.add(platform)
+    db_session.add_all(items)
+    db_session.flush()
+    start = datetime.utcnow() - timedelta(days=8)
+    for index in range(9):
+        db_session.add(
+            CollectRunLog(
+                mode="worker",
+                provider="steam",
+                status="success",
+                item_count=5,
+                snapshot_count=5,
+                started_at=start + timedelta(days=index),
+                finished_at=start + timedelta(days=index, minutes=1),
+            )
+        )
+    quality = json.dumps(
+        {
+            "source_quality": {
+                "real_fields": ["lowest_price", "sell_count", "highest_buy_price", "buy_count", "volume_24h", "avg_price_24h"],
+                "fallback_fields": [],
+            }
+        }
+    )
+    for item in items:
+        db_session.add(
+            MarketSnapshot(
+                item_id=item.id,
+                platform_id=platform.id,
+                lowest_price=100,
+                sell_count=10,
+                highest_buy_price=90,
+                buy_count=5,
+                volume_24h=2,
+                avg_price_24h=98,
+                raw_payload=quality,
+            )
+        )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/ops/p0-summary")
+    finally:
+        settings.market_provider = previous_provider
+        settings.steam_orderbook_enabled = previous_orderbook
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ready"] is True
+    assert body["status"] == "ready"
+    assert body["blockers"] == []
+    assert body["readiness"]["ready_for_7d_review"] is True
+    assert body["source_config"]["readiness"] == "ready"
+
+
 def create_ops_fixture(db_session) -> Alert:
     item = Item(market_hash_name="ops-item", display_name="Ops Item")
     platform = Platform(code="steam", name="Steam")

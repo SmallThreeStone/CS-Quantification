@@ -200,6 +200,17 @@ export type SourceConfig = {
   suggestion: string;
 };
 
+export type P0Summary = {
+  ready: boolean;
+  status: string;
+  blockers: string[];
+  review_items: string[];
+  readiness: OpsReadiness;
+  source_config: SourceConfig;
+  field_quality: SourceFieldQuality;
+  alert_count: number;
+};
+
 export type RetentionMetric = {
   name: string;
   retention_days: number | null;

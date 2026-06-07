@@ -20,6 +20,7 @@ import type {
   MonitorItem,
   OpsHealth,
   OpsReadiness,
+  P0Summary,
   PushRecord,
   Retention,
   SourceConfig,
@@ -43,6 +44,7 @@ export default function App() {
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
+  const [p0Summary, setP0Summary] = useState<P0Summary | null>(null);
   const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
   const [retention, setRetention] = useState<Retention | null>(null);
@@ -67,6 +69,7 @@ export default function App() {
         nextPushRecords,
         nextOpsHealth,
         nextOpsReadiness,
+        nextP0Summary,
         nextSourceConfig,
         nextSourceFieldQuality,
         nextRetention,
@@ -83,6 +86,7 @@ export default function App() {
         api.pushRecords(),
         api.opsHealth(),
         api.opsReadiness(),
+        api.p0Summary(),
         api.sourceConfig(),
         api.sourceFieldQuality(),
         api.retention(),
@@ -99,6 +103,7 @@ export default function App() {
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
       setOpsReadiness(nextOpsReadiness);
+      setP0Summary(nextP0Summary);
       setSourceConfig(nextSourceConfig);
       setSourceFieldQuality(nextSourceFieldQuality);
       setRetention(nextRetention);
@@ -231,6 +236,7 @@ export default function App() {
             collectRuns={collectRuns}
             opsHealth={opsHealth}
             opsReadiness={opsReadiness}
+            p0Summary={p0Summary}
             sourceConfig={sourceConfig}
             sourceFieldQuality={sourceFieldQuality}
             retention={retention}
@@ -1329,6 +1335,7 @@ function SourceView({
   collectRuns,
   opsHealth,
   opsReadiness,
+  p0Summary,
   sourceConfig,
   sourceFieldQuality,
   retention
@@ -1340,6 +1347,7 @@ function SourceView({
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
   opsReadiness: OpsReadiness | null;
+  p0Summary: P0Summary | null;
   sourceConfig: SourceConfig | null;
   sourceFieldQuality: SourceFieldQuality | null;
   retention: Retention | null;
@@ -1378,6 +1386,27 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>P0 验证摘要</h3>
+        {p0Summary ? (
+          <>
+            <div className="push-row">
+              <span>{p0Summary.status}</span>
+              <strong>{p0Summary.ready ? "可复盘" : "未就绪"}</strong>
+              <span>{p0Summary.alert_count} 条告警</span>
+              <span>{p0Summary.blockers.length ? p0Summary.blockers.join("；") : "暂无阻塞项"}</span>
+            </div>
+            {p0Summary.review_items.map((item) => (
+              <div className="push-row" key={item}>
+                <span>复盘项</span>
+                <strong>{item}</strong>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无 P0 验证摘要</div>
+        )}
       </div>
       <div className="push-table">
         <h3>数据源配置</h3>

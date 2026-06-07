@@ -32,6 +32,7 @@ from app.schemas.market import (
     MonitorPoolUpdate,
     MonitorItemOut,
     OpsHealthOut,
+    P0SummaryOut,
     OpsReadinessOut,
     RetentionCleanupOut,
     PushRecordOut,
@@ -103,6 +104,44 @@ def ops_health(db: Session = Depends(get_db)) -> OpsHealthOut:
 
 @router.get("/ops/readiness", response_model=OpsReadinessOut)
 def ops_readiness(db: Session = Depends(get_db)) -> OpsReadinessOut:
+    return _ops_readiness(db)
+
+
+@router.get("/ops/p0-summary", response_model=P0SummaryOut)
+def p0_summary(db: Session = Depends(get_db)) -> P0SummaryOut:
+    readiness = _ops_readiness(db)
+    source = _source_config(db)
+    field_quality = _source_field_quality(db, 500)
+    blockers: list[str] = []
+    if source.readiness != "ready":
+        blockers.append(source.suggestion)
+    if not readiness.ready_for_7d_review:
+        blockers.append("连续采集尚未满足 7 天观察、80% 成功率和 80% 快照覆盖率")
+    weak_fields = [field.label for field in field_quality.fields if field.real_ratio < 0.8]
+    if weak_fields:
+        blockers.append(f"字段真实率不足：{', '.join(weak_fields)}")
+    alert_count = db.query(Alert).count()
+    review_items = [
+        "检查 30 个测试饰品是否持续产生快照",
+        "对照 Steam 市场抽查底价、成交与买卖盘字段",
+        "确认告警触发后可追溯原始快照",
+    ]
+    if alert_count == 0:
+        review_items.append("当前暂无告警，继续观察是否能输出第一版异动告警")
+    ready = not blockers
+    return P0SummaryOut(
+        ready=ready,
+        status="ready" if ready else "blocked",
+        blockers=blockers,
+        review_items=review_items,
+        readiness=readiness,
+        source_config=source,
+        field_quality=field_quality,
+        alert_count=alert_count,
+    )
+
+
+def _ops_readiness(db: Session) -> OpsReadinessOut:
     runs = db.query(CollectRunLog).order_by(CollectRunLog.started_at.asc()).all()
     first_run = runs[0] if runs else None
     latest_run = runs[-1] if runs else None
@@ -131,6 +170,10 @@ def ops_readiness(db: Session = Depends(get_db)) -> OpsReadinessOut:
 
 @router.get("/source/field-quality", response_model=SourceFieldQualityOut)
 def source_field_quality(limit: int = Query(default=500, ge=1, le=5000), db: Session = Depends(get_db)) -> SourceFieldQualityOut:
+    return _source_field_quality(db, limit)
+
+
+def _source_field_quality(db: Session, limit: int) -> SourceFieldQualityOut:
     snapshots = db.query(MarketSnapshot).order_by(MarketSnapshot.captured_at.desc()).limit(limit).all()
     stats = {field: {"real": 0, "fallback": 0} for field, _ in SOURCE_FIELDS}
     for snapshot in snapshots:
@@ -163,6 +206,10 @@ def source_field_quality(limit: int = Query(default=500, ge=1, le=5000), db: Ses
 
 @router.get("/source/config", response_model=SourceConfigOut)
 def source_config(db: Session = Depends(get_db)) -> SourceConfigOut:
+    return _source_config(db)
+
+
+def _source_config(db: Session) -> SourceConfigOut:
     provider = settings.market_provider.lower()
     configured_nameids = _configured_nameids()
     active_items = db.query(Item).filter_by(is_active=True).all()

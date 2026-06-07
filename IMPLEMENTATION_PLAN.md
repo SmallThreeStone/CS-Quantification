@@ -229,6 +229,7 @@
    2. 实施进度：部署验证脚本已读取 `/api/ops/health`，用于确认采集、推送和 worker 运行状态。
    3. 实施进度：部署验证脚本已读取 `/api/ops/readiness`，用于查看 P0 观察天数、采集轮次和快照覆盖率。
    4. 实施进度：部署验证脚本已读取 `/api/source/config`，用于确认 provider、订单簿开关和 Steam NameID 覆盖率。
+   5. 实施进度：部署验证脚本已读取 `/api/ops/p0-summary`，用于汇总 P0 阻塞项和复盘检查项。
 9. 部署前备份数据库。
    1. 实施进度：已增加 `scripts/backup_postgres.ps1`，支持 Docker Compose PostgreSQL 生成 `.dump` 备份并清理过期备份。
 
@@ -279,6 +280,7 @@
 4. 验证底价、在售、求购、成交数据准确性。
    1. 实施进度：已增加 `/api/source/field-quality`，用于观察核心字段真实率并识别 Steam priceoverview / 订单簿的字段覆盖情况。
 5. 输出第一版异动告警。
+   1. 实施进度：已增加 `/api/ops/p0-summary`，汇总数据源配置、连续采集、字段真实率、告警数量、阻塞项和复盘检查项。
 
 ### P1：MVP 平台
 
