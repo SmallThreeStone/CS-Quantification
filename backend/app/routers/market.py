@@ -1,4 +1,6 @@
 import json
+import os
+import shutil
 from datetime import datetime, timedelta
 from math import ceil
 
@@ -27,6 +29,7 @@ from app.schemas.market import (
     DbWriteVolumeOut,
     HeatmapBucketOut,
     HealthOut,
+    HostResourceOut,
     HistoryPointOut,
     ItemCreate,
     ItemDetailOut,
@@ -72,7 +75,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.60"
+APP_VERSION = "0.1.61"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 API_LATENCY_WINDOW_MINUTES = 15
@@ -566,6 +569,29 @@ def ops_db_write_volume(db: Session = Depends(get_db)) -> DbWriteVolumeOut:
         total_row_count=sum(metric.total_count for metric in metrics),
         latest_write_at=max(latest_candidates) if latest_candidates else None,
         metrics=metrics,
+    )
+
+@router.get("/ops/host-resources", response_model=HostResourceOut)
+def ops_host_resources() -> HostResourceOut:
+    cpu_percent = _host_cpu_percent()
+    memory_total_mb, memory_used_mb, memory_percent = _host_memory()
+    disk_total_gb, disk_used_gb, disk_percent = _host_disk()
+    percentages = [value for value in [cpu_percent, memory_percent, disk_percent] if value is not None]
+    status = "ok"
+    if any(value >= 90 for value in percentages):
+        status = "fail"
+    elif any(value >= 80 for value in percentages):
+        status = "warn"
+    return HostResourceOut(
+        status=status,
+        cpu_percent=cpu_percent,
+        memory_total_mb=memory_total_mb,
+        memory_used_mb=memory_used_mb,
+        memory_percent=memory_percent,
+        disk_total_gb=disk_total_gb,
+        disk_used_gb=disk_used_gb,
+        disk_percent=disk_percent,
+        checked_at=datetime.utcnow(),
     )
 
 
@@ -1269,6 +1295,75 @@ def _db_write_metric(db: Session, model, date_column, name: str, table: str) -> 
         oldest_at=db.query(date_column).order_by(date_column.asc()).limit(1).scalar(),
         latest_at=db.query(date_column).order_by(date_column.desc()).limit(1).scalar(),
     )
+
+
+def _host_cpu_percent() -> float | None:
+    loadavg = getattr(os, "getloadavg", None)
+    if loadavg is None:
+        return None
+    cpu_count = os.cpu_count() or 1
+    return round(min(loadavg()[0] / cpu_count * 100, 100), 2)
+
+
+def _host_memory() -> tuple[float | None, float | None, float | None]:
+    linux_memory = _linux_memory()
+    if linux_memory != (None, None, None):
+        return linux_memory
+    return _windows_memory()
+
+
+def _linux_memory() -> tuple[float | None, float | None, float | None]:
+    meminfo_path = "/proc/meminfo"
+    if not os.path.exists(meminfo_path):
+        return None, None, None
+    values: dict[str, float] = {}
+    with open(meminfo_path, encoding="utf-8") as file:
+        for line in file:
+            parts = line.split()
+            if len(parts) >= 2 and parts[0].rstrip(":") in {"MemTotal", "MemAvailable"}:
+                values[parts[0].rstrip(":")] = float(parts[1])
+    total_kb = values.get("MemTotal")
+    available_kb = values.get("MemAvailable")
+    if not total_kb or available_kb is None:
+        return None, None, None
+    used_kb = max(total_kb - available_kb, 0)
+    return round(total_kb / 1024, 2), round(used_kb / 1024, 2), round(used_kb / total_kb * 100, 2)
+
+
+def _windows_memory() -> tuple[float | None, float | None, float | None]:
+    if os.name != "nt":
+        return None, None, None
+    try:
+        import ctypes
+    except ImportError:
+        return None, None, None
+
+    class MemoryStatus(ctypes.Structure):
+        _fields_ = [
+            ("dwLength", ctypes.c_ulong),
+            ("dwMemoryLoad", ctypes.c_ulong),
+            ("ullTotalPhys", ctypes.c_ulonglong),
+            ("ullAvailPhys", ctypes.c_ulonglong),
+            ("ullTotalPageFile", ctypes.c_ulonglong),
+            ("ullAvailPageFile", ctypes.c_ulonglong),
+            ("ullTotalVirtual", ctypes.c_ulonglong),
+            ("ullAvailVirtual", ctypes.c_ulonglong),
+            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
+
+    status = MemoryStatus()
+    status.dwLength = ctypes.sizeof(status)
+    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+        return None, None, None
+    used = status.ullTotalPhys - status.ullAvailPhys
+    return round(status.ullTotalPhys / 1024 / 1024, 2), round(used / 1024 / 1024, 2), round(status.dwMemoryLoad, 2)
+
+
+def _host_disk() -> tuple[float | None, float | None, float | None]:
+    total, used, _free = shutil.disk_usage(os.getcwd())
+    if not total:
+        return None, None, None
+    return round(total / 1024 / 1024 / 1024, 2), round(used / 1024 / 1024 / 1024, 2), round(used / total * 100, 2)
 
 
 def _configured_nameids() -> dict[str, str]:

@@ -25,6 +25,9 @@ Show-Json "api-latency" $apiLatency
 $dbWriteVolume = Invoke-RestMethod "$BaseUrl/api/ops/db-write-volume"
 Show-Json "db-write-volume" $dbWriteVolume
 
+$hostResources = Invoke-RestMethod "$BaseUrl/api/ops/host-resources"
+Show-Json "host-resources" $hostResources
+
 $opsReadiness = Invoke-RestMethod "$BaseUrl/api/ops/readiness"
 Show-Json "ops-readiness" $opsReadiness
 

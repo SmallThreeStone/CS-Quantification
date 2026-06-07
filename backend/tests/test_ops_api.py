@@ -178,7 +178,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.60"
+    assert body["version"] == "0.1.61"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -389,6 +389,24 @@ def test_ops_db_write_volume_reports_recent_writes(db_session):
     assert metrics["alerts"]["recent_24h_count"] == 1
     assert metrics["push_records"]["recent_24h_count"] == 1
     assert metrics["collect_run_logs"]["recent_24h_count"] == 1
+
+
+def test_ops_host_resources_reports_current_host_state(db_session):
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/host-resources")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] in {"ok", "warn", "fail"}
+    assert body["checked_at"] is not None
+    assert body["disk_total_gb"] is None or body["disk_total_gb"] > 0
+    assert body["disk_used_gb"] is None or body["disk_used_gb"] >= 0
+    assert body["disk_percent"] is None or 0 <= body["disk_percent"] <= 100
+    assert body["memory_percent"] is None or 0 <= body["memory_percent"] <= 100
+    assert body["cpu_percent"] is None or 0 <= body["cpu_percent"] <= 100
 
 
 def test_ops_acceptance_reports_review_for_empty_state(db_session):

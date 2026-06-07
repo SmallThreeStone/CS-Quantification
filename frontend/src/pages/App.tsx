@@ -16,6 +16,7 @@ import type {
   BacktestSummary,
   CollectRun,
   DbWriteVolume,
+  HostResource,
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
@@ -56,6 +57,7 @@ export default function App() {
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [apiLatency, setApiLatency] = useState<ApiLatency | null>(null);
   const [dbWriteVolume, setDbWriteVolume] = useState<DbWriteVolume | null>(null);
+  const [hostResource, setHostResource] = useState<HostResource | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   const [runtimeAudit, setRuntimeAudit] = useState<RuntimeAudit | null>(null);
@@ -90,6 +92,7 @@ export default function App() {
         nextOpsHealth,
         nextApiLatency,
         nextDbWriteVolume,
+        nextHostResource,
         nextOpsReadiness,
         nextRuntimeConfig,
         nextRuntimeAudit,
@@ -116,6 +119,7 @@ export default function App() {
         api.opsHealth(),
         api.opsApiLatency(),
         api.opsDbWriteVolume(),
+        api.opsHostResources(),
         api.opsReadiness(),
         api.opsRuntime(),
         api.opsRuntimeAudit(),
@@ -142,6 +146,7 @@ export default function App() {
       setOpsHealth(nextOpsHealth);
       setApiLatency(nextApiLatency);
       setDbWriteVolume(nextDbWriteVolume);
+      setHostResource(nextHostResource);
       setOpsReadiness(nextOpsReadiness);
       setRuntimeConfig(nextRuntimeConfig);
       setRuntimeAudit(nextRuntimeAudit);
@@ -284,6 +289,7 @@ export default function App() {
             opsHealth={opsHealth}
             apiLatency={apiLatency}
             dbWriteVolume={dbWriteVolume}
+            hostResource={hostResource}
             opsReadiness={opsReadiness}
             runtimeConfig={runtimeConfig}
             runtimeAudit={runtimeAudit}
@@ -1392,6 +1398,7 @@ function SourceView({
   opsHealth,
   apiLatency,
   dbWriteVolume,
+  hostResource,
   opsReadiness,
   runtimeConfig,
   runtimeAudit,
@@ -1413,6 +1420,7 @@ function SourceView({
   opsHealth: OpsHealth | null;
   apiLatency: ApiLatency | null;
   dbWriteVolume: DbWriteVolume | null;
+  hostResource: HostResource | null;
   opsReadiness: OpsReadiness | null;
   runtimeConfig: RuntimeConfig | null;
   runtimeAudit: RuntimeAudit | null;
@@ -1456,6 +1464,9 @@ function SourceView({
         <Metric label="24h 写入" value={dbWriteVolume ? `${dbWriteVolume.total_recent_24h_count} 行` : "暂无"} tone={dbWriteVolume?.status === "active" ? "up" : "neutral"} />
         <Metric label="数据库总行" value={dbWriteVolume ? `${dbWriteVolume.total_row_count} 行` : "暂无"} />
         <Metric label="最新写入" value={dbWriteVolume?.latest_write_at ? formatTime(dbWriteVolume.latest_write_at) : "暂无"} tone={dbWriteVolume?.status === "active" ? "up" : "neutral"} />
+        <Metric label="CPU" value={formatNullablePercent(hostResource?.cpu_percent)} tone={hostResourceTone(hostResource?.status)} />
+        <Metric label="内存" value={formatNullablePercent(hostResource?.memory_percent)} tone={hostResourceTone(hostResource?.status)} />
+        <Metric label="磁盘" value={formatNullablePercent(hostResource?.disk_percent)} tone={hostResourceTone(hostResource?.status)} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="24h 快照" value={opsHealth ? `${opsHealth.snapshot_count_24h} 条` : "暂无"} />
         <Metric label="24h 告警" value={opsHealth ? `${opsHealth.alert_count_24h} 条` : "暂无"} />
@@ -1492,6 +1503,32 @@ function SourceView({
           </>
         ) : (
           <div className="empty">暂无数据库写入量</div>
+        )}
+      </div>
+      <div className="push-table">
+        <h3>主机资源</h3>
+        {hostResource ? (
+          <>
+            <div className="push-row">
+              <span>{hostResource.status}</span>
+              <strong>CPU {formatNullablePercent(hostResource.cpu_percent)}</strong>
+              <span>内存 {formatNullablePercent(hostResource.memory_percent)}</span>
+              <span>磁盘 {formatNullablePercent(hostResource.disk_percent)}</span>
+              <span>{formatTime(hostResource.checked_at)}</span>
+            </div>
+            <div className="push-row">
+              <span>内存用量</span>
+              <strong>{formatNullableMb(hostResource.memory_used_mb)}</strong>
+              <span>总计 {formatNullableMb(hostResource.memory_total_mb)}</span>
+            </div>
+            <div className="push-row">
+              <span>磁盘用量</span>
+              <strong>{formatNullableGb(hostResource.disk_used_gb)}</strong>
+              <span>总计 {formatNullableGb(hostResource.disk_total_gb)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="empty">暂无主机资源数据</div>
         )}
       </div>
       <div className="push-table">
@@ -1798,6 +1835,18 @@ function formatPercent(value: number) {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+function formatNullablePercent(value?: number | null) {
+  return value == null ? "暂无" : `${value.toFixed(1)}%`;
+}
+
+function formatNullableMb(value?: number | null) {
+  return value == null ? "暂无" : `${value.toFixed(0)} MB`;
+}
+
+function formatNullableGb(value?: number | null) {
+  return value == null ? "暂无" : `${value.toFixed(1)} GB`;
+}
+
 function formatChange(value: number) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}`;
 }
@@ -1893,6 +1942,16 @@ function opsTone(status?: string) {
 }
 
 function apiLatencyTone(status?: string) {
+  if (status === "ok") {
+    return "up";
+  }
+  if (status === "fail") {
+    return "down";
+  }
+  return "neutral";
+}
+
+function hostResourceTone(status?: string) {
   if (status === "ok") {
     return "up";
   }

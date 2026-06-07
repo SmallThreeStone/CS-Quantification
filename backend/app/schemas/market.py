@@ -533,6 +533,18 @@ class DbWriteVolumeOut(BaseModel):
     metrics: list[DbWriteVolumeMetricOut]
 
 
+class HostResourceOut(BaseModel):
+    status: str
+    cpu_percent: float | None
+    memory_total_mb: float | None
+    memory_used_mb: float | None
+    memory_percent: float | None
+    disk_total_gb: float | None
+    disk_used_gb: float | None
+    disk_percent: float | None
+    checked_at: datetime
+
+
 class RetentionOut(BaseModel):
     snapshot_retention_days: int
     collect_log_retention_days: int

@@ -248,6 +248,7 @@
    12. 实施进度：部署验证脚本已读取 `/api/ops/mvp-scope`，用于确认 P1 页面和模块范围具备状态。
    13. 实施进度：部署验证脚本已读取 `/api/ops/api-latency`，用于确认 API 响应时间、慢请求和 5xx 错误数量。
    14. 实施进度：部署验证脚本已读取 `/api/ops/db-write-volume`，用于确认数据库近 24 小时写入量和最新写入时间。
+   15. 实施进度：部署验证脚本已读取 `/api/ops/host-resources`，用于确认云服务器 CPU、内存和磁盘占用。
 9. 部署前备份数据库。
    1. 实施进度：已增加 `scripts/backup_postgres.ps1`，支持 Docker Compose PostgreSQL 生成 `.dump` 备份并清理过期备份。
 
@@ -265,6 +266,8 @@
 4. 推送成功率。
 5. 告警数量。
 6. CPU / 内存 / 磁盘。
+   1. 实施进度：已增加 `/api/ops/host-resources`，输出 CPU、内存和磁盘占用，并按 80%/90% 阈值给出 ok/warn/fail 状态。
+   2. 实施进度：前端数据源状态页已展示 CPU、内存、磁盘占用和主机资源明细。
 7. 数据源异常次数。
 8. worker 是否正常运行。
    1. 实施进度：已增加 `/api/ops/health`，按最近 24 小时输出采集、推送、worker 延迟和数据源异常指标。

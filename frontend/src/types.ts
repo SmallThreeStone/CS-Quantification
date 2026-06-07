@@ -211,6 +211,18 @@ export type DbWriteVolume = {
   metrics: DbWriteVolumeMetric[];
 };
 
+export type HostResource = {
+  status: "ok" | "warn" | "fail";
+  cpu_percent: number | null;
+  memory_total_mb: number | null;
+  memory_used_mb: number | null;
+  memory_percent: number | null;
+  disk_total_gb: number | null;
+  disk_used_gb: number | null;
+  disk_percent: number | null;
+  checked_at: string;
+};
+
 export type OpsReadiness = {
   ready_for_7d_review: boolean;
   observed_days: number;
