@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app.config import settings
 from app.database import get_db
 from app.main import app
-from app.models import Alert, CollectRunLog, Item, MarketSnapshot, Platform, PushRecord
+from app.models import Alert, BacktestResult, CollectRunLog, Item, MarketSnapshot, Platform, PushRecord, StrategyConfig
 from tests.test_strategy_api import override_session
 
 
@@ -124,7 +124,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.53"
+    assert body["version"] == "0.1.54"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -222,6 +222,130 @@ def test_ops_runtime_audit_marks_production_shape_ready(db_session):
     assert body["status"] == "ready"
     assert body["fail_count"] == 0
     assert body["warn_count"] == 0
+
+
+def test_ops_acceptance_reports_review_for_empty_state(db_session):
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/acceptance")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    items = {item["key"]: item for item in body["items"]}
+    assert body["status"] in {"review", "blocked"}
+    assert items["stable_collection_7d"]["status"] == "review"
+    assert items["decision_reference_only"]["status"] == "passed"
+    assert "观察 0.0 天" in items["stable_collection_7d"]["evidence"]
+
+
+def test_ops_acceptance_marks_core_evidence_passed(db_session):
+    previous_database_url = settings.database_url
+    previous_provider = settings.market_provider
+    previous_orderbook = settings.steam_orderbook_enabled
+    previous_worker_sleep = settings.worker_sleep_seconds
+    previous_push_channel = settings.push_channel
+    previous_wechat = settings.wechat_webhook_url
+    previous_cors = settings.cors_origins
+    settings.database_url = "postgresql://cs_quant:strong_password@postgres:5432/cs_quant"
+    settings.market_provider = "steam"
+    settings.steam_orderbook_enabled = True
+    settings.worker_sleep_seconds = 30
+    settings.push_channel = "wechat"
+    settings.wechat_webhook_url = "https://example.test/webhook"
+    settings.cors_origins = "https://cs.example.test"
+    platform = Platform(code="steam", name="Steam")
+    item = Item(market_hash_name="accept-item", display_name="Accept Item", steam_item_nameid="123", is_active=True)
+    db_session.add_all([platform, item, StrategyConfig(name="default")])
+    db_session.flush()
+    start = datetime.utcnow() - timedelta(days=8)
+    for index in range(9):
+        db_session.add(
+            CollectRunLog(
+                mode="worker",
+                provider="steam",
+                status="success",
+                item_count=1,
+                snapshot_count=1,
+                started_at=start + timedelta(days=index),
+                finished_at=start + timedelta(days=index, minutes=1),
+            )
+        )
+    snapshot = MarketSnapshot(
+        item_id=item.id,
+        platform_id=platform.id,
+        lowest_price=100,
+        sell_count=10,
+        highest_buy_price=90,
+        buy_count=5,
+        volume_24h=2,
+        avg_price_24h=98,
+        raw_payload=json.dumps(
+            {
+                "source_quality": {
+                    "real_fields": ["lowest_price", "sell_count", "highest_buy_price", "buy_count", "volume_24h", "avg_price_24h"],
+                    "fallback_fields": [],
+                }
+            }
+        ),
+    )
+    db_session.add(snapshot)
+    db_session.flush()
+    alert = Alert(
+        item_id=item.id,
+        platform_id=platform.id,
+        snapshot_id=snapshot.id,
+        alert_type="在售变化",
+        title="accept",
+        detail="accept",
+        previous_value=10,
+        current_value=20,
+        absolute_change=10,
+        change_rate=1,
+    )
+    db_session.add(alert)
+    db_session.flush()
+    db_session.add_all(
+        [
+            PushRecord(alert_id=alert.id, channel="wechat", status="sent", target="", message="ok"),
+            BacktestResult(
+                alert_id=alert.id,
+                item_id=item.id,
+                platform_id=platform.id,
+                horizon_minutes=60,
+                entry_price=100,
+                exit_price=105,
+                price_change=5,
+                change_rate=0.05,
+                evaluated_at=datetime.utcnow(),
+            ),
+        ]
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/ops/acceptance")
+    finally:
+        settings.database_url = previous_database_url
+        settings.market_provider = previous_provider
+        settings.steam_orderbook_enabled = previous_orderbook
+        settings.worker_sleep_seconds = previous_worker_sleep
+        settings.push_channel = previous_push_channel
+        settings.wechat_webhook_url = previous_wechat
+        settings.cors_origins = previous_cors
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    items = {item["key"]: item for item in body["items"]}
+    assert body["blocked_count"] == 0
+    assert items["stable_collection_7d"]["status"] == "passed"
+    assert items["sell_depth_accuracy"]["status"] == "passed"
+    assert items["buy_depth_accuracy"]["status"] == "passed"
+    assert items["alert_traceability"]["status"] == "passed"
+    assert items["opportunity_ranking"]["status"] == "passed"
 
 
 def test_ops_readiness_reports_empty_state(db_session):

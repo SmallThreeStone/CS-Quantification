@@ -217,6 +217,21 @@ export type RuntimeAudit = {
   items: RuntimeAuditItem[];
 };
 
+export type AcceptanceItem = {
+  key: string;
+  label: string;
+  status: "passed" | "review" | "blocked";
+  evidence: string;
+};
+
+export type Acceptance = {
+  status: "passed" | "review" | "blocked";
+  passed_count: number;
+  review_count: number;
+  blocked_count: number;
+  items: AcceptanceItem[];
+};
+
 export type FieldQuality = {
   field: string;
   label: string;

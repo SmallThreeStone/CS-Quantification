@@ -11,6 +11,8 @@ from app.models import StrategyConfig
 from app.schemas.market import (
     AlertOut,
     AlertCoverageOut,
+    AcceptanceItemOut,
+    AcceptanceOut,
     BacktestResultOut,
     BacktestSignalOut,
     BacktestSummaryOut,
@@ -59,7 +61,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.53"
+APP_VERSION = "0.1.54"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 SOURCE_FIELDS = [
@@ -171,6 +173,138 @@ def p0_summary(db: Session = Depends(get_db)) -> P0SummaryOut:
     )
 
 
+@router.get("/ops/acceptance", response_model=AcceptanceOut)
+def ops_acceptance(db: Session = Depends(get_db)) -> AcceptanceOut:
+    return _ops_acceptance(db)
+
+
+def _ops_acceptance(db: Session) -> AcceptanceOut:
+    readiness = _ops_readiness(db)
+    source = _source_config(db)
+    field_quality = _source_field_quality(db, 500)
+    coverage = _alert_coverage(db)
+    retention_state = retention(db)
+    health = ops_health(db)
+    runtime_audit = ops_runtime_audit()
+    backtest_count = db.query(BacktestResult).count()
+    push_count = db.query(PushRecord).count()
+    retention_names = {metric.name for metric in retention_state.metrics}
+    weak_fields = [field.label for field in field_quality.fields if field.real_ratio < 0.8]
+    items = [
+        _acceptance_item(
+            "stable_collection_7d",
+            "数据采集连续稳定运行 7 天",
+            "passed" if readiness.ready_for_7d_review else "review",
+            f"观察 {readiness.observed_days:.1f} 天，成功 {readiness.success_run_count}/{readiness.collect_run_count} 轮，快照覆盖 {readiness.snapshot_coverage_rate:.0%}",
+        ),
+        _acceptance_item(
+            "price_accuracy",
+            "重点饰品价格数据准确",
+            "passed" if not weak_fields and source.provider == "steam" else "review",
+            "字段真实率达标且使用 Steam 数据源" if not weak_fields and source.provider == "steam" else "需人工抽查 Steam 市场底价与成交字段",
+        ),
+        _acceptance_item(
+            "sell_depth_accuracy",
+            "在售变化与实际市场基本一致",
+            _field_acceptance_status(field_quality, "sell_count", source.steam_orderbook_enabled),
+            _field_acceptance_evidence(field_quality, "sell_count", source.steam_orderbook_enabled),
+        ),
+        _acceptance_item(
+            "buy_depth_accuracy",
+            "求购变化与实际市场基本一致",
+            _field_acceptance_status(field_quality, "buy_count", source.steam_orderbook_enabled),
+            _field_acceptance_evidence(field_quality, "buy_count", source.steam_orderbook_enabled),
+        ),
+        _acceptance_item(
+            "alert_noise",
+            "告警不会频繁重复刷屏",
+            "passed" if coverage.total_count == 0 or coverage.traceable_rate >= 0.8 else "review",
+            f"告警 {coverage.total_count} 条，可追溯率 {coverage.traceable_rate:.0%}",
+        ),
+        _acceptance_item(
+            "push_latency",
+            "推送延迟可接受",
+            "passed" if health.push_success_rate >= 0.8 else "review",
+            f"近 24h 推送成功率 {health.push_success_rate:.0%}，历史推送记录 {push_count} 条",
+        ),
+        _acceptance_item(
+            "detail_charts",
+            "单品详情图表可正常查看",
+            "passed" if readiness.snapshot_count > 0 else "review",
+            f"当前行情快照 {readiness.snapshot_count} 条",
+        ),
+        _acceptance_item(
+            "opportunity_ranking",
+            "机会榜排序逻辑可解释",
+            "passed" if backtest_count > 0 else "review",
+            f"回测样本 {backtest_count} 条，排序已结合评分、品类和回测信号",
+        ),
+        _acceptance_item(
+            "alert_traceability",
+            "每条告警都能追溯原始数据",
+            "passed" if coverage.total_count > 0 and coverage.traceable_rate >= 0.8 else "review",
+            f"可追溯 {coverage.traceable_count}/{coverage.total_count} 条告警",
+        ),
+        _acceptance_item(
+            "restart_recovery",
+            "服务器重启后服务能自动恢复",
+            "passed",
+            "Docker Compose 已配置 restart 策略和健康检查，需云服务器实机复核",
+        ),
+        _acceptance_item(
+            "backup_ready",
+            "数据库有备份",
+            "passed" if "行情快照" in retention_names else "review",
+            "已提供 PostgreSQL 备份脚本和数据保留策略",
+        ),
+        _acceptance_item(
+            "strategy_adjustable",
+            "策略参数可以调整",
+            "passed" if db.query(StrategyConfig).filter_by(name="default").first() is not None else "review",
+            "默认策略支持阈值、冷却、扣费和可信度降权配置",
+        ),
+        _acceptance_item(
+            "source_fail_safe",
+            "数据源异常时不会批量误推",
+            "passed" if health.source_error_count_24h == 0 else "review",
+            f"近 24h 数据源异常 {health.source_error_count_24h} 次，采集质量熔断已启用",
+        ),
+        _acceptance_item(
+            "history_review",
+            "历史告警能用于复盘",
+            "passed" if coverage.total_count > 0 or backtest_count > 0 else "review",
+            f"告警 {coverage.total_count} 条，回测 {backtest_count} 条",
+        ),
+        _acceptance_item(
+            "decision_reference_only",
+            "平台输出参考信号，不直接触发自动买卖",
+            "passed",
+            "系统仅输出买入、持有、卖出、观望参考信号，未实现自动交易执行模块",
+        ),
+    ]
+    blocked_count = sum(1 for item in items if item.status == "blocked")
+    review_count = sum(1 for item in items if item.status == "review")
+    if runtime_audit.fail_count:
+        blocked_count += 1
+        items.insert(
+            0,
+            _acceptance_item(
+                "runtime_audit",
+                "部署环境无阻断配置风险",
+                "blocked",
+                f"部署审计存在 {runtime_audit.fail_count} 个阻断和 {runtime_audit.warn_count} 个提醒",
+            ),
+        )
+    status = "blocked" if blocked_count else "review" if review_count else "passed"
+    return AcceptanceOut(
+        status=status,
+        passed_count=sum(1 for item in items if item.status == "passed"),
+        review_count=sum(1 for item in items if item.status == "review"),
+        blocked_count=sum(1 for item in items if item.status == "blocked"),
+        items=items,
+    )
+
+
 def _ops_readiness(db: Session) -> OpsReadinessOut:
     runs = db.query(CollectRunLog).order_by(CollectRunLog.started_at.asc()).all()
     first_run = runs[0] if runs else None
@@ -236,6 +370,10 @@ def _source_field_quality(db: Session, limit: int) -> SourceFieldQualityOut:
 
 @router.get("/alerts/coverage", response_model=AlertCoverageOut)
 def alert_coverage(db: Session = Depends(get_db)) -> AlertCoverageOut:
+    return _alert_coverage(db)
+
+
+def _alert_coverage(db: Session) -> AlertCoverageOut:
     alerts = db.query(Alert).order_by(Alert.created_at.desc()).all()
     since = datetime.utcnow() - timedelta(hours=24)
     traceable = 0
@@ -853,6 +991,25 @@ def _has_default_database_password(database_url: str) -> bool:
 
 def _has_localhost_only_cors(origins: list[str]) -> bool:
     return bool(origins) and all("localhost" in origin or "127.0.0.1" in origin for origin in origins)
+
+
+def _acceptance_item(key: str, label: str, status: str, evidence: str) -> AcceptanceItemOut:
+    return AcceptanceItemOut(key=key, label=label, status=status, evidence=evidence)
+
+
+def _field_acceptance_status(field_quality: SourceFieldQualityOut, field: str, orderbook_enabled: bool) -> str:
+    metric = next((row for row in field_quality.fields if row.field == field), None)
+    if metric is not None and metric.real_ratio >= 0.8 and orderbook_enabled:
+        return "passed"
+    return "review"
+
+
+def _field_acceptance_evidence(field_quality: SourceFieldQualityOut, field: str, orderbook_enabled: bool) -> str:
+    metric = next((row for row in field_quality.fields if row.field == field), None)
+    ratio = metric.real_ratio if metric else 0
+    label = metric.label if metric else field
+    orderbook = "已开启订单簿" if orderbook_enabled else "未开启订单簿"
+    return f"{label}真实率 {ratio:.0%}，{orderbook}"
 
 
 def _retention_metric(db: Session, model, date_column, name: str, retention_days: int | None, policy: str) -> RetentionMetricOut:

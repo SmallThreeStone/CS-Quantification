@@ -1,4 +1,5 @@
 import type {
+  Acceptance,
   Alert,
   AlertCoverage,
   BacktestResult,
@@ -64,6 +65,7 @@ export const api = {
   opsReadiness: () => request<OpsReadiness>("/api/ops/readiness"),
   opsRuntime: () => request<RuntimeConfig>("/api/ops/runtime"),
   opsRuntimeAudit: () => request<RuntimeAudit>("/api/ops/runtime-audit"),
+  opsAcceptance: () => request<Acceptance>("/api/ops/acceptance"),
   p0Summary: () => request<P0Summary>("/api/ops/p0-summary"),
   sourceConfig: () => request<SourceConfig>("/api/source/config"),
   sourceFieldQuality: () => request<SourceFieldQuality>("/api/source/field-quality"),

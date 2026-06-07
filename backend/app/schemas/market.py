@@ -367,6 +367,21 @@ class RuntimeAuditOut(BaseModel):
     items: list[RuntimeAuditItemOut]
 
 
+class AcceptanceItemOut(BaseModel):
+    key: str
+    label: str
+    status: str
+    evidence: str
+
+
+class AcceptanceOut(BaseModel):
+    status: str
+    passed_count: int
+    review_count: int
+    blocked_count: int
+    items: list[AcceptanceItemOut]
+
+
 class OpsHealthOut(BaseModel):
     status: str
     latest_run_status: str

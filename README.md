@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.53 — 增加部署环境审计
+V0.1.54 — 增加上线验收摘要
 
 ## 功能范围
 
@@ -33,6 +33,7 @@ V0.1.53 — 增加部署环境审计
 - worker 调度：支持通过 `WORKER_SLEEP_SECONDS` 配置后台轮询间隔
 - 运行时体检：数据源状态页和部署验证脚本展示版本、数据库类型、推送配置、worker 间隔和 CORS 数量
 - 部署环境审计：检查数据库类型、默认密码、行情源、订单簿、推送、worker 间隔和 CORS 配置风险
+- 上线验收摘要：按 15 条上线前验收标准汇总通过、待复盘和阻断项，并展示证据
 - 告警回测：记录告警后多窗口价格变化、胜率和平均变化
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
 - 数据源状态：展示 Mock / Steam 适配层、订单簿开关、真实字段占比、补位字段、fallback 次数、最近错误和运维健康指标
@@ -143,6 +144,7 @@ docker compose up -d --build
 - `GET /api/ops/readiness`
 - `GET /api/ops/runtime`
 - `GET /api/ops/runtime-audit`
+- `GET /api/ops/acceptance`
 - `GET /api/ops/p0-summary`
 - `GET /api/source/config`
 - `GET /api/source/field-quality`
@@ -189,6 +191,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.54 — 增加上线验收摘要，按 15 条上线前验收标准汇总通过、待复盘和阻断项。
 - V0.1.53 — 增加部署环境审计，检查数据库类型、默认密码、行情源、订单簿、推送、worker 间隔和 CORS 配置风险。
 - V0.1.52 — 增加运行时配置体检，展示版本、数据库类型、数据源、推送配置、worker 间隔和 CORS 数量。
 - V0.1.51 — 增加 worker 调度间隔配置，支持通过 `WORKER_SLEEP_SECONDS` 调整后台轮询频率。

@@ -8,6 +8,7 @@ import { AlertList } from "../components/AlertList";
 import { Metric } from "../components/Metric";
 import { MiniChart } from "../components/MiniChart";
 import type {
+  Acceptance,
   Alert,
   AlertCoverage,
   BacktestResult,
@@ -50,6 +51,7 @@ export default function App() {
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   const [runtimeAudit, setRuntimeAudit] = useState<RuntimeAudit | null>(null);
+  const [acceptance, setAcceptance] = useState<Acceptance | null>(null);
   const [p0Summary, setP0Summary] = useState<P0Summary | null>(null);
   const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
@@ -78,6 +80,7 @@ export default function App() {
         nextOpsReadiness,
         nextRuntimeConfig,
         nextRuntimeAudit,
+        nextAcceptance,
         nextP0Summary,
         nextSourceConfig,
         nextSourceFieldQuality,
@@ -98,6 +101,7 @@ export default function App() {
         api.opsReadiness(),
         api.opsRuntime(),
         api.opsRuntimeAudit(),
+        api.opsAcceptance(),
         api.p0Summary(),
         api.sourceConfig(),
         api.sourceFieldQuality(),
@@ -118,6 +122,7 @@ export default function App() {
       setOpsReadiness(nextOpsReadiness);
       setRuntimeConfig(nextRuntimeConfig);
       setRuntimeAudit(nextRuntimeAudit);
+      setAcceptance(nextAcceptance);
       setP0Summary(nextP0Summary);
       setSourceConfig(nextSourceConfig);
       setSourceFieldQuality(nextSourceFieldQuality);
@@ -254,6 +259,7 @@ export default function App() {
             opsReadiness={opsReadiness}
             runtimeConfig={runtimeConfig}
             runtimeAudit={runtimeAudit}
+            acceptance={acceptance}
             p0Summary={p0Summary}
             sourceConfig={sourceConfig}
             sourceFieldQuality={sourceFieldQuality}
@@ -1356,6 +1362,7 @@ function SourceView({
   opsReadiness,
   runtimeConfig,
   runtimeAudit,
+  acceptance,
   p0Summary,
   sourceConfig,
   sourceFieldQuality,
@@ -1371,6 +1378,7 @@ function SourceView({
   opsReadiness: OpsReadiness | null;
   runtimeConfig: RuntimeConfig | null;
   runtimeAudit: RuntimeAudit | null;
+  acceptance: Acceptance | null;
   p0Summary: P0Summary | null;
   sourceConfig: SourceConfig | null;
   sourceFieldQuality: SourceFieldQuality | null;
@@ -1415,6 +1423,28 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>上线验收摘要</h3>
+        {acceptance ? (
+          <>
+            <div className="push-row">
+              <span>{acceptance.status}</span>
+              <strong>{acceptance.passed_count} 项通过</strong>
+              <span>{acceptance.review_count} 项待复盘</span>
+              <span>{acceptance.blocked_count} 项阻断</span>
+            </div>
+            {acceptance.items.map((item) => (
+              <div className="push-row" key={item.key}>
+                <span>{item.label}</span>
+                <strong className={acceptanceClass(item.status)}>{acceptanceText(item.status)}</strong>
+                <span>{item.evidence}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无上线验收摘要</div>
+        )}
       </div>
       <div className="push-table">
         <h3>部署环境审计</h3>
@@ -1738,6 +1768,26 @@ function auditClass(status: string) {
     return "up";
   }
   if (status === "fail") {
+    return "down";
+  }
+  return "quality-tag partial";
+}
+
+function acceptanceText(status: string) {
+  if (status === "passed") {
+    return "通过";
+  }
+  if (status === "blocked") {
+    return "阻断";
+  }
+  return "待复盘";
+}
+
+function acceptanceClass(status: string) {
+  if (status === "passed") {
+    return "up";
+  }
+  if (status === "blocked") {
     return "down";
   }
   return "quality-tag partial";
