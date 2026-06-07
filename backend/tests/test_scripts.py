@@ -61,3 +61,16 @@ def test_verify_deploy_shell_script_checks_core_endpoints_and_collect():
     assert 'json_get "acceptance" "/api/ops/acceptance"' in script
     assert 'json_post "collect" "/api/collect"' in script
     assert 'curl -fsS -o /dev/null -w "status=%{http_code}\\n" "$BASE_URL"' in script
+
+
+def test_install_backup_cron_script_installs_daily_backup_jobs():
+    script = (ROOT / "scripts" / "install_backup_cron.sh").read_text(encoding="utf-8")
+
+    assert 'CRON_FILE="/etc/cron.d/cs-quant-backup"' in script
+    assert "--project-dir" in script
+    assert "--postgres-time" in script
+    assert "--config-time" in script
+    assert "installing to /etc/cron.d requires root" in script
+    assert "bash scripts/backup_postgres.sh >> backups/logs/postgres_backup.log 2>&1" in script
+    assert "bash scripts/backup_config.sh >> backups/logs/config_backup.log 2>&1" in script
+    assert 'chmod 0644 "$CRON_FILE"' in script
