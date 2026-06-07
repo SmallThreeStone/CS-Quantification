@@ -43,6 +43,9 @@ Show-Json "alert-coverage" $alertCoverage
 $monitor = Invoke-RestMethod "$BaseUrl/api/monitor"
 Show-Json "monitor" @{ count = $monitor.Count }
 
+$monitorCoverage = Invoke-RestMethod "$BaseUrl/api/monitor/coverage"
+Show-Json "monitor-coverage" $monitorCoverage
+
 $runs = Invoke-RestMethod "$BaseUrl/api/collect-runs"
 Show-Json "collect-runs" @{ count = $runs.Count; latest = if ($runs.Count) { $runs[0] } else { $null } }
 

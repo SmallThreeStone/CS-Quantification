@@ -232,6 +232,23 @@ export type Acceptance = {
   items: AcceptanceItem[];
 };
 
+export type MonitorCoverageBucket = {
+  name: string;
+  active_count: number;
+  total_count: number;
+};
+
+export type MonitorCoverage = {
+  status: "ready" | "below_p1" | "over_p1";
+  active_item_count: number;
+  total_item_count: number;
+  p1_min_item_count: number;
+  p1_max_item_count: number;
+  missing_nameid_count: number;
+  pools: MonitorCoverageBucket[];
+  categories: MonitorCoverageBucket[];
+};
+
 export type FieldQuality = {
   field: string;
   label: string;

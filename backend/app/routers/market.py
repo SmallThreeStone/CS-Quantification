@@ -32,6 +32,8 @@ from app.schemas.market import (
     SteamNameIdBatchOut,
     SteamNameIdOut,
     MonitorPoolCreate,
+    MonitorCoverageBucketOut,
+    MonitorCoverageOut,
     MonitorPoolOut,
     MonitorPoolUpdate,
     MonitorItemOut,
@@ -61,7 +63,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.55"
+APP_VERSION = "0.1.56"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 SOURCE_FIELDS = [
@@ -479,6 +481,24 @@ def monitor(db: Session = Depends(get_db)) -> list[MonitorItemOut]:
     return [_monitor_item(db, item, config) for item in items]
 
 
+@router.get("/monitor/coverage", response_model=MonitorCoverageOut)
+def monitor_coverage(db: Session = Depends(get_db)) -> MonitorCoverageOut:
+    active_items = db.query(Item).filter_by(is_active=True).all()
+    all_items = db.query(Item).all()
+    total_item_count = db.query(Item).count()
+    active_item_count = len(active_items)
+    return MonitorCoverageOut(
+        status=_monitor_coverage_status(active_item_count),
+        active_item_count=active_item_count,
+        total_item_count=total_item_count,
+        p1_min_item_count=100,
+        p1_max_item_count=300,
+        missing_nameid_count=sum(1 for item in active_items if not item.steam_item_nameid),
+        pools=_monitor_pool_coverage(db),
+        categories=_monitor_category_coverage(active_items, all_items),
+    )
+
+
 @router.get("/items", response_model=list[ItemOut])
 def item_list(db: Session = Depends(get_db)) -> list[ItemOut]:
     items = db.query(Item).order_by(Item.is_active.desc(), Item.display_name.asc()).all()
@@ -888,6 +908,45 @@ def _monitor_item(db: Session, item: Item, config: StrategyConfig) -> MonitorIte
         backtest_signal=backtest_signal,
         decision_signal=decision_signal,
     )
+
+
+def _monitor_coverage_status(active_item_count: int) -> str:
+    if active_item_count < 100:
+        return "below_p1"
+    if active_item_count > 300:
+        return "over_p1"
+    return "ready"
+
+
+def _monitor_pool_coverage(db: Session) -> list[MonitorCoverageBucketOut]:
+    pools = db.query(MonitorPool).order_by(MonitorPool.name.asc()).all()
+    return [
+        MonitorCoverageBucketOut(
+            name=pool.name,
+            active_count=sum(1 for item in pool.items if item.is_active),
+            total_count=len(pool.items),
+        )
+        for pool in pools
+    ]
+
+
+def _monitor_category_coverage(active_items: list[Item], all_items: list[Item]) -> list[MonitorCoverageBucketOut]:
+    active_counts: dict[str, int] = {}
+    total_counts: dict[str, int] = {}
+    for item in active_items:
+        category = item.category or "uncategorized"
+        active_counts[category] = active_counts.get(category, 0) + 1
+    for item in all_items:
+        category = item.category or "uncategorized"
+        total_counts[category] = total_counts.get(category, 0) + 1
+    return [
+        MonitorCoverageBucketOut(
+            name=category,
+            active_count=count,
+            total_count=total_counts.get(category, count),
+        )
+        for category, count in sorted(active_counts.items(), key=lambda row: row[1], reverse=True)
+    ] if all_items else []
 
 
 def _opportunity_rank_score(row: MonitorItemOut) -> int:

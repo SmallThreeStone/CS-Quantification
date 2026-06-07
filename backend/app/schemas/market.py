@@ -382,6 +382,23 @@ class AcceptanceOut(BaseModel):
     items: list[AcceptanceItemOut]
 
 
+class MonitorCoverageBucketOut(BaseModel):
+    name: str
+    active_count: int
+    total_count: int
+
+
+class MonitorCoverageOut(BaseModel):
+    status: str
+    active_item_count: int
+    total_item_count: int
+    p1_min_item_count: int
+    p1_max_item_count: int
+    missing_nameid_count: int
+    pools: list[MonitorCoverageBucketOut]
+    categories: list[MonitorCoverageBucketOut]
+
+
 class OpsHealthOut(BaseModel):
     status: str
     latest_run_status: str

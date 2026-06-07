@@ -17,6 +17,7 @@ import type {
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
+  MonitorCoverage,
   MonitorPool,
   MonitorPoolInput,
   MonitorItem,
@@ -44,6 +45,7 @@ export default function App() {
   const [managedItems, setManagedItems] = useState<ManagedItem[]>([]);
   const [pools, setPools] = useState<MonitorPool[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [monitorCoverage, setMonitorCoverage] = useState<MonitorCoverage | null>(null);
   const [alertCoverage, setAlertCoverage] = useState<AlertCoverage | null>(null);
   const [alertFilters, setAlertFilters] = useState<AlertFilters>({});
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
@@ -71,6 +73,7 @@ export default function App() {
     try {
       const [
         nextItems,
+        nextMonitorCoverage,
         nextManagedItems,
         nextPools,
         nextAlerts,
@@ -92,6 +95,7 @@ export default function App() {
         nextStrategy
       ] = await Promise.all([
         api.monitor(),
+        api.monitorCoverage(),
         api.items(),
         api.monitorPools(),
         api.alerts(alertFilters),
@@ -113,6 +117,7 @@ export default function App() {
         api.strategy()
       ]);
       setItems(nextItems);
+      setMonitorCoverage(nextMonitorCoverage);
       setManagedItems(nextManagedItems);
       setPools(nextPools);
       setAlerts(nextAlerts);
@@ -250,6 +255,7 @@ export default function App() {
         {tab === "source" && (
           <SourceView
             items={items}
+            monitorCoverage={monitorCoverage}
             pools={pools}
             alerts={alerts}
             alertCoverage={alertCoverage}
@@ -1353,6 +1359,7 @@ function fromPercent(value: number) {
 
 function SourceView({
   items,
+  monitorCoverage,
   pools,
   alerts,
   alertCoverage,
@@ -1369,6 +1376,7 @@ function SourceView({
   retention
 }: {
   items: MonitorItem[];
+  monitorCoverage: MonitorCoverage | null;
   pools: MonitorPool[];
   alerts: Alert[];
   alertCoverage: AlertCoverage | null;
@@ -1403,7 +1411,7 @@ function SourceView({
         <Metric label="轮询间隔" value={runtimeConfig ? `${runtimeConfig.worker_sleep_seconds} 秒` : "暂无"} />
         <Metric label="CORS 数量" value={runtimeConfig ? `${runtimeConfig.cors_origin_count} 个` : "暂无"} />
         <Metric label="NameID 覆盖" value={sourceConfig ? `${sourceConfig.active_nameid_count}/${sourceConfig.active_item_count}` : "暂无"} tone={sourceConfig && sourceConfig.active_nameid_coverage_rate >= 0.8 ? "up" : "neutral"} />
-        <Metric label="监控饰品" value={`${items.length} 个`} />
+        <Metric label="监控饰品" value={monitorCoverage ? `${monitorCoverage.active_item_count}/${monitorCoverage.total_item_count}` : `${items.length} 个`} tone={monitorCoverageTone(monitorCoverage?.status)} />
         <Metric label="监控池" value={`${pools.length} 个`} />
         <Metric label="运维状态" value={opsHealth ? opsStatusText(opsHealth.status) : "暂无"} tone={opsTone(opsHealth?.status)} />
         <Metric label="采集成功率" value={opsHealth ? formatPercent(opsHealth.collect_success_rate) : "暂无"} tone={opsHealth && opsHealth.collect_success_rate >= 0.8 ? "up" : "neutral"} />
@@ -1423,6 +1431,35 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>监控范围摘要</h3>
+        {monitorCoverage ? (
+          <>
+            <div className="push-row">
+              <span>{monitorCoverage.status}</span>
+              <strong>{monitorCoverage.active_item_count} 个启用</strong>
+              <span>P1 范围 {monitorCoverage.p1_min_item_count}-{monitorCoverage.p1_max_item_count}</span>
+              <span>缺失 NameID {monitorCoverage.missing_nameid_count}</span>
+            </div>
+            {monitorCoverage.pools.map((pool) => (
+              <div className="push-row" key={pool.name}>
+                <span>{pool.name}</span>
+                <strong>{pool.active_count} 个启用</strong>
+                <span>总计 {pool.total_count}</span>
+              </div>
+            ))}
+            {monitorCoverage.categories.map((category) => (
+              <div className="push-row" key={category.name}>
+                <span>{category.name}</span>
+                <strong>{category.active_count} 个启用</strong>
+                <span>总计 {category.total_count}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无监控范围摘要</div>
+        )}
       </div>
       <div className="push-table">
         <h3>上线验收摘要</h3>
@@ -1748,6 +1785,16 @@ function sourceConfigTone(readiness?: string) {
     return "up";
   }
   if (readiness === "partial") {
+    return "neutral";
+  }
+  return "down";
+}
+
+function monitorCoverageTone(status?: string) {
+  if (status === "ready") {
+    return "up";
+  }
+  if (status === "over_p1") {
     return "neutral";
   }
   return "down";
