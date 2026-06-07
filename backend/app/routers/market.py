@@ -21,6 +21,7 @@ from app.schemas.market import (
     BacktestResultOut,
     BacktestSignalOut,
     BacktestSummaryOut,
+    BackupCronStatusOut,
     BackupStatusMetricOut,
     BackupStatusOut,
     CollectRunLogOut,
@@ -78,7 +79,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.65"
+APP_VERSION = "0.1.66"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 API_LATENCY_WINDOW_MINUTES = 15
@@ -623,9 +624,10 @@ def ops_backups() -> BackupStatusOut:
             retention_days=CONFIG_BACKUP_RETENTION_DAYS,
         ),
     ]
-    statuses = {metric.status for metric in metrics}
+    cron = _backup_cron_status(root)
+    statuses = {metric.status for metric in metrics} | {cron.status}
     status = "fail" if "fail" in statuses else "warn" if "warn" in statuses else "ready"
-    return BackupStatusOut(status=status, checked_at=datetime.utcnow(), metrics=metrics)
+    return BackupStatusOut(status=status, checked_at=datetime.utcnow(), metrics=metrics, cron=cron)
 
 
 @router.post("/retention/cleanup", response_model=RetentionCleanupOut)
@@ -1454,6 +1456,48 @@ def _backup_status_metric(
         stale_days=round(stale_days, 2) if stale_days is not None else None,
         detail=detail,
     )
+
+
+def _backup_cron_status(root: Path) -> BackupCronStatusOut:
+    cron_file = _backup_cron_file(root)
+    content = cron_file.read_text(encoding="utf-8") if cron_file.exists() else ""
+    postgres_job = "backup_postgres.sh" in content
+    config_job = "backup_config.sh" in content
+    postgres_log = root / "backups/logs/postgres_backup.log"
+    config_log = root / "backups/logs/config_backup.log"
+    if not cron_file.exists():
+        status = "warn"
+        detail = "尚未发现每日备份 cron，请在云服务器执行 install_backup_cron.sh"
+    elif not postgres_job or not config_job:
+        status = "warn"
+        detail = "cron 文件存在，但未同时包含数据库和配置备份任务"
+    else:
+        status = "ready"
+        detail = "每日数据库和配置备份 cron 已安装"
+    return BackupCronStatusOut(
+        status=status,
+        cron_file=str(cron_file),
+        cron_exists=cron_file.exists(),
+        postgres_job_installed=postgres_job,
+        config_job_installed=config_job,
+        postgres_log_latest_at=_file_mtime(postgres_log),
+        config_log_latest_at=_file_mtime(config_log),
+        detail=detail,
+    )
+
+
+def _backup_cron_file(root: Path) -> Path:
+    project_cron = root / "backups/cron/cs-quant-backup"
+    if project_cron.exists():
+        return project_cron
+    system_cron = Path("/etc/cron.d/cs-quant-backup")
+    if system_cron.exists():
+        return system_cron
+    return project_cron
+
+
+def _file_mtime(path: Path) -> datetime | None:
+    return datetime.utcfromtimestamp(path.stat().st_mtime) if path.exists() else None
 
 
 def _configured_nameids() -> dict[str, str]:

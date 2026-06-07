@@ -103,6 +103,7 @@ cd frontend && npm run dev
 - **Docker 架构：多服务 Compose**。建议拆分为 frontend、backend、worker、postgres、redis，采集任务和 API 服务分离，便于单独重启和监控
 - **部署前必须先备份数据库和重要配置**：OpenCloud OS 9 云服务器常规线上更新前执行 `bash scripts/backup_postgres.sh` 与 `bash scripts/backup_config.sh`；Windows 本地可使用 `./scripts/backup_postgres.ps1` 与 `./scripts/backup_config.ps1`。确认备份文件非空后再执行 `git pull`、重启或重建
 - **云服务器可安装每日备份 cron**：OpenCloud OS 9 上执行 `sudo bash scripts/install_backup_cron.sh --project-dir /data/cs-market-monitor`，默认 03:10 备份数据库、03:40 备份配置
+- **每日备份 cron 安装后必须可巡检**：确认 `/api/ops/backups` 显示 cron 已安装、数据库和配置备份任务均已配置
 - **容器内热更新前置检查**：先确认服务器 git 工作区干净、当前分支正确、目标 commit 与远端一致；pull 后必须确认实际 HEAD 等于本地已推送 commit
 - **热更新后置检查**：重启后必须验证 `docker compose ps`、`/api/health`、公网首页 200、采集任务正常运行、告警推送服务无错误日志
 - **云服务器部署验证优先使用 Linux 脚本**：OpenCloud OS 9 上执行 `bash scripts/verify_deploy.sh --base-url http://localhost`；需要触发一轮采集时追加 `--collect`
@@ -119,7 +120,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.65 — 增加 Linux 定时备份安装脚本
+V0.1.66 — 增加备份 cron 巡检
 
 ## 环境要求
 

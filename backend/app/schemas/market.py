@@ -560,10 +560,22 @@ class BackupStatusMetricOut(BaseModel):
     detail: str
 
 
+class BackupCronStatusOut(BaseModel):
+    status: str
+    cron_file: str
+    cron_exists: bool
+    postgres_job_installed: bool
+    config_job_installed: bool
+    postgres_log_latest_at: datetime | None
+    config_log_latest_at: datetime | None
+    detail: str
+
+
 class BackupStatusOut(BaseModel):
     status: str
     checked_at: datetime
     metrics: list[BackupStatusMetricOut]
+    cron: BackupCronStatusOut
 
 
 class RetentionOut(BaseModel):

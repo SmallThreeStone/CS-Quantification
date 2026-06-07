@@ -1549,6 +1549,16 @@ function SourceView({
               <strong>{formatTime(backupStatus.checked_at)}</strong>
               <span>{backupStatus.metrics.length} 项巡检</span>
             </div>
+            <div className="push-row">
+              <span>每日备份 cron</span>
+              <strong className={backupStatusClass(backupStatus.cron.status)}>{backupStatusText(backupStatus.cron.status)}</strong>
+              <span>{backupStatus.cron.cron_exists ? "已安装" : "未安装"}</span>
+              <span>数据库 {backupStatus.cron.postgres_job_installed ? "已配置" : "缺失"}</span>
+              <span>配置 {backupStatus.cron.config_job_installed ? "已配置" : "缺失"}</span>
+              <span>{backupStatus.cron.postgres_log_latest_at ? `库 ${formatTime(backupStatus.cron.postgres_log_latest_at)}` : "库无日志"}</span>
+              <span>{backupStatus.cron.config_log_latest_at ? `配置 ${formatTime(backupStatus.cron.config_log_latest_at)}` : "配置无日志"}</span>
+              <span>{backupStatus.cron.detail}</span>
+            </div>
             {backupStatus.metrics.map((metric) => (
               <div className="push-row" key={metric.key}>
                 <span>{metric.label}</span>

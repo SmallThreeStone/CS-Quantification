@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.65 — 增加 Linux 定时备份安装脚本
+V0.1.66 — 增加备份 cron 巡检
 
 ## 功能范围
 
@@ -46,7 +46,7 @@ V0.1.65 — 增加 Linux 定时备份安装脚本
 - API 响应时间：展示近 15 分钟请求数、平均耗时、P95、慢请求和 5xx 错误数量
 - 数据库写入量：展示近 24 小时行情快照、告警、推送、回测和采集日志写入量、总行数和最新写入时间
 - 主机资源巡检：展示 CPU、内存和磁盘占用，辅助云服务器部署后判断资源压力
-- 备份状态巡检：展示数据库备份和配置备份脚本、最近文件、大小、时间和过期状态，支持 Linux `.sh` 与 Windows PowerShell 脚本
+- 备份状态巡检：展示数据库备份和配置备份脚本、最近文件、大小、时间、过期状态和每日备份 cron 安装状态
 - 定时备份：支持 OpenCloud OS 9 通过 cron 每日执行数据库和配置备份
 - 部署验证：支持 Linux `verify_deploy.sh` 和 Windows PowerShell `verify_deploy.ps1` 巡检核心 API、前端首页和可选采集
 - P0 就绪度：展示观察天数、采集轮次、快照覆盖率和 7 天复盘状态
@@ -176,6 +176,7 @@ sudo bash scripts/install_backup_cron.sh --project-dir /data/cs-market-monitor
 ```
 
 默认每天 03:10 执行数据库备份，03:40 执行配置备份，日志写入 `backups/logs/`。
+安装脚本会同步写入 `backups/cron/cs-quant-backup`，便于后端只读巡检 cron 任务状态。
 
 ## API
 
@@ -238,6 +239,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.66 — 增加备份 cron 巡检，数据源状态页展示每日备份任务是否安装、任务覆盖和最近日志时间。
 - V0.1.65 — 增加 Linux 定时备份安装脚本，支持 OpenCloud OS 9 通过 cron 每日执行数据库和配置备份。
 - V0.1.64 — 增加 Linux 部署验证脚本，支持 OpenCloud OS 9 通过 bash 巡检核心 API、前端首页和可选采集。
 - V0.1.63 — 增加 Linux 备份脚本，支持 OpenCloud OS 9 通过 bash 执行数据库和配置备份。

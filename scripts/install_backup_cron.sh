@@ -47,8 +47,10 @@ fi
 
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 mkdir -p "$PROJECT_DIR/backups/logs"
+mkdir -p "$PROJECT_DIR/backups/cron"
+PROJECT_CRON_FILE="$PROJECT_DIR/backups/cron/cs-quant-backup"
 
-cat > "$CRON_FILE" <<EOF
+cat > "$PROJECT_CRON_FILE" <<EOF
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
@@ -56,10 +58,13 @@ ${POSTGRES_MINUTE} ${POSTGRES_HOUR} * * * ${RUN_USER} cd ${PROJECT_DIR} && bash 
 ${CONFIG_MINUTE} ${CONFIG_HOUR} * * * ${RUN_USER} cd ${PROJECT_DIR} && bash scripts/backup_config.sh >> backups/logs/config_backup.log 2>&1
 EOF
 
+cp "$PROJECT_CRON_FILE" "$CRON_FILE"
 chmod 0644 "$CRON_FILE"
+chmod 0644 "$PROJECT_CRON_FILE"
 
 echo "== backup cron installed =="
 echo "file=${CRON_FILE}"
+echo "project_file=${PROJECT_CRON_FILE}"
 echo "user=${RUN_USER}"
 echo "project=${PROJECT_DIR}"
 echo "postgres=${POSTGRES_HOUR}:${POSTGRES_MINUTE}"

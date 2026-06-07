@@ -71,6 +71,8 @@ def test_install_backup_cron_script_installs_daily_backup_jobs():
     assert "--postgres-time" in script
     assert "--config-time" in script
     assert "installing to /etc/cron.d requires root" in script
+    assert 'PROJECT_CRON_FILE="$PROJECT_DIR/backups/cron/cs-quant-backup"' in script
+    assert 'cp "$PROJECT_CRON_FILE" "$CRON_FILE"' in script
     assert "bash scripts/backup_postgres.sh >> backups/logs/postgres_backup.log 2>&1" in script
     assert "bash scripts/backup_config.sh >> backups/logs/config_backup.log 2>&1" in script
     assert 'chmod 0644 "$CRON_FILE"' in script

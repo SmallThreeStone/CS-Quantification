@@ -180,7 +180,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.65"
+    assert body["version"] == "0.1.66"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -424,6 +424,8 @@ def test_ops_backups_warns_without_backup_files(db_session, tmp_path, monkeypatc
     body = response.json()
     assert body["status"] == "warn"
     assert {metric["key"] for metric in body["metrics"]} == {"postgres", "config"}
+    assert body["cron"]["status"] == "warn"
+    assert body["cron"]["cron_exists"] is False
     for metric in body["metrics"]:
         assert metric["script_exists"] is True
         assert metric["file_count"] == 0
@@ -432,6 +434,7 @@ def test_ops_backups_warns_without_backup_files(db_session, tmp_path, monkeypatc
 
 def test_ops_backups_reports_ready_with_recent_non_empty_files(db_session, tmp_path, monkeypatch):
     create_backup_scripts(tmp_path)
+    create_backup_cron(tmp_path)
     postgres_dir = tmp_path / "backups" / "postgres"
     config_dir = tmp_path / "backups" / "config"
     postgres_dir.mkdir(parents=True)
@@ -448,6 +451,9 @@ def test_ops_backups_reports_ready_with_recent_non_empty_files(db_session, tmp_p
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ready"
+    assert body["cron"]["status"] == "ready"
+    assert body["cron"]["postgres_job_installed"] is True
+    assert body["cron"]["config_job_installed"] is True
     metrics = {metric["key"]: metric for metric in body["metrics"]}
     assert metrics["postgres"]["latest_file"].endswith(".dump")
     assert metrics["postgres"]["latest_size_bytes"] > 0
@@ -864,3 +870,13 @@ def create_backup_scripts(root: Path) -> None:
     scripts.mkdir(parents=True)
     (scripts / "backup_postgres.sh").write_text("postgres backup", encoding="utf-8")
     (scripts / "backup_config.sh").write_text("config backup", encoding="utf-8")
+
+
+def create_backup_cron(root: Path) -> None:
+    cron = root / "backups" / "cron"
+    cron.mkdir(parents=True)
+    (cron / "cs-quant-backup").write_text(
+        "10 3 * * * app cd /app && bash scripts/backup_postgres.sh\n"
+        "40 3 * * * app cd /app && bash scripts/backup_config.sh\n",
+        encoding="utf-8",
+    )

@@ -238,10 +238,22 @@ export type BackupStatusMetric = {
   detail: string;
 };
 
+export type BackupCronStatus = {
+  status: "ready" | "warn" | "fail";
+  cron_file: string;
+  cron_exists: boolean;
+  postgres_job_installed: boolean;
+  config_job_installed: boolean;
+  postgres_log_latest_at: string | null;
+  config_log_latest_at: string | null;
+  detail: string;
+};
+
 export type BackupStatus = {
   status: "ready" | "warn" | "fail";
   checked_at: string;
   metrics: BackupStatusMetric[];
+  cron: BackupCronStatus;
 };
 
 export type OpsReadiness = {
