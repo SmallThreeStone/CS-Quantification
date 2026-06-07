@@ -4,6 +4,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_compose_binds_internal_services_to_loopback_only():
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+
+    assert "127.0.0.1:5432:5432" in compose
+    assert "127.0.0.1:6379:6379" in compose
+    assert "127.0.0.1:8000:8000" in compose
+    assert '"5432:5432"' not in compose
+    assert '"6379:6379"' not in compose
+    assert '"8000:8000"' not in compose
+
+
 def test_backup_postgres_script_uses_compose_dump_and_retention():
     script = (ROOT / "scripts" / "backup_postgres.ps1").read_text(encoding="utf-8")
 

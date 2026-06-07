@@ -305,6 +305,7 @@
 5. 后台登录鉴权。
 6. API 访问鉴权。
 7. 管理接口限制 IP 或增加访问控制。
+   1. 实施进度：已收紧 Docker Compose 端口暴露，PostgreSQL、Redis 和 backend API 仅绑定 `127.0.0.1`，公网优先只暴露 frontend 入口；MVP 登录鉴权仍按前置确认暂不实现。
 8. Token、API Key、数据库密码全部使用环境变量。
 
 ## 八、阶段里程碑
