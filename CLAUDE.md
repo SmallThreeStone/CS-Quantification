@@ -102,6 +102,7 @@ cd frontend && npm run dev
 - **必须重建镜像的情况**：`frontend/` 源码或静态构建产物变化、`package.json`/`package-lock.json`、`requirements.txt`、Dockerfile、docker-compose.yml、Node/Python 版本、系统依赖、构建脚本、镜像内路径结构发生变化时，执行 `docker compose up -d --build`
 - **Docker 架构：多服务 Compose**。建议拆分为 frontend、backend、worker、postgres、redis，采集任务和 API 服务分离，便于单独重启和监控
 - **云服务器端口暴露控制**：PostgreSQL、Redis、backend API 只允许绑定 `127.0.0.1`；公网入口优先只暴露 frontend 的 80/443
+- **云服务器端口巡检**：部署验证时执行 `bash scripts/check_firewall.sh`，确认 PostgreSQL、Redis、backend 未监听公网地址
 - **部署前必须先备份数据库和重要配置**：OpenCloud OS 9 云服务器常规线上更新前执行 `bash scripts/backup_postgres.sh` 与 `bash scripts/backup_config.sh`；Windows 本地可使用 `./scripts/backup_postgres.ps1` 与 `./scripts/backup_config.ps1`。确认备份文件非空后再执行 `git pull`、重启或重建
 - **云服务器可安装每日备份 cron**：OpenCloud OS 9 上执行 `sudo bash scripts/install_backup_cron.sh --project-dir /data/cs-market-monitor`，默认 03:10 备份数据库、03:40 备份配置
 - **每日备份 cron 安装后必须可巡检**：确认 `/api/ops/backups` 显示 cron 已安装、数据库和配置备份任务均已配置
@@ -121,7 +122,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.67 — 收紧 Compose 端口暴露
+V0.1.68 — 增加 Linux 端口巡检脚本
 
 ## 环境要求
 

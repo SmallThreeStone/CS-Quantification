@@ -63,6 +63,7 @@ def test_verify_deploy_shell_script_checks_core_endpoints_and_collect():
     script = (ROOT / "scripts" / "verify_deploy.sh").read_text(encoding="utf-8")
 
     assert "docker compose ps" in script
+    assert "bash scripts/check_firewall.sh" in script
     assert 'json_get "health" "/api/health"' in script
     assert 'json_get "ops-health" "/api/ops/health"' in script
     assert 'json_get "api-latency" "/api/ops/api-latency"' in script
@@ -72,6 +73,18 @@ def test_verify_deploy_shell_script_checks_core_endpoints_and_collect():
     assert 'json_get "acceptance" "/api/ops/acceptance"' in script
     assert 'json_post "collect" "/api/collect"' in script
     assert 'curl -fsS -o /dev/null -w "status=%{http_code}\\n" "$BASE_URL"' in script
+
+
+def test_check_firewall_shell_script_guards_internal_ports():
+    script = (ROOT / "scripts" / "check_firewall.sh").read_text(encoding="utf-8")
+
+    assert "ss -ltn" in script
+    assert "check_loopback_only 5432 PostgreSQL" in script
+    assert "check_loopback_only 6379 Redis" in script
+    assert "check_loopback_only 8000 Backend" in script
+    assert "check_public_entry 80 Frontend" in script
+    assert "check_public_entry 443 HTTPS" in script
+    assert "exposed beyond loopback" in script
 
 
 def test_install_backup_cron_script_installs_daily_backup_jobs():

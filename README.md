@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.67 — 收紧 Compose 端口暴露
+V0.1.68 — 增加 Linux 端口巡检脚本
 
 ## 功能范围
 
@@ -50,6 +50,7 @@ V0.1.67 — 收紧 Compose 端口暴露
 - 定时备份：支持 OpenCloud OS 9 通过 cron 每日执行数据库和配置备份
 - 部署验证：支持 Linux `verify_deploy.sh` 和 Windows PowerShell `verify_deploy.ps1` 巡检核心 API、前端首页和可选采集
 - 端口暴露控制：Docker Compose 中 PostgreSQL、Redis 和 backend 仅绑定本机地址，公网只暴露前端入口
+- 端口监听巡检：Linux 部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址
 - P0 就绪度：展示观察天数、采集轮次、快照覆盖率和 7 天复盘状态
 - P0 验证摘要：聚合数据源配置、连续采集、字段真实率、告警数量、阻塞项和复盘检查项
 - 数据保留：数据源状态页展示行情快照、告警、回测和采集日志的保留策略、当前数据量和最早记录时间，支持清理过期快照与采集日志
@@ -135,6 +136,11 @@ bash scripts/verify_deploy.sh --base-url http://localhost --collect
 ```
 
 验证脚本需要服务器已安装 Docker Compose，并且项目服务已经启动。
+也可以单独检查端口监听状态：
+
+```bash
+bash scripts/check_firewall.sh
+```
 
 ### 数据库备份
 
@@ -240,6 +246,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.68 — 增加 Linux 端口巡检脚本，部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址。
 - V0.1.67 — 收紧 Compose 端口暴露，PostgreSQL、Redis 和 backend 仅绑定本机地址，降低云服务器公网暴露面。
 - V0.1.66 — 增加备份 cron 巡检，数据源状态页展示每日备份任务是否安装、任务覆盖和最近日志时间。
 - V0.1.65 — 增加 Linux 定时备份安装脚本，支持 OpenCloud OS 9 通过 cron 每日执行数据库和配置备份。

@@ -38,6 +38,9 @@ json_post() {
 echo "== docker compose ps =="
 docker compose ps
 
+echo "== firewall =="
+bash scripts/check_firewall.sh
+
 json_get "health" "/api/health"
 json_get "ops-health" "/api/ops/health"
 json_get "api-latency" "/api/ops/api-latency"
