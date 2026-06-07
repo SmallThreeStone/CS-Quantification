@@ -24,6 +24,7 @@ import type {
   P0Summary,
   PushRecord,
   Retention,
+  RuntimeAudit,
   RuntimeConfig,
   SourceConfig,
   SourceFieldQuality,
@@ -48,6 +49,7 @@ export default function App() {
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
+  const [runtimeAudit, setRuntimeAudit] = useState<RuntimeAudit | null>(null);
   const [p0Summary, setP0Summary] = useState<P0Summary | null>(null);
   const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
@@ -75,6 +77,7 @@ export default function App() {
         nextOpsHealth,
         nextOpsReadiness,
         nextRuntimeConfig,
+        nextRuntimeAudit,
         nextP0Summary,
         nextSourceConfig,
         nextSourceFieldQuality,
@@ -94,6 +97,7 @@ export default function App() {
         api.opsHealth(),
         api.opsReadiness(),
         api.opsRuntime(),
+        api.opsRuntimeAudit(),
         api.p0Summary(),
         api.sourceConfig(),
         api.sourceFieldQuality(),
@@ -113,6 +117,7 @@ export default function App() {
       setOpsHealth(nextOpsHealth);
       setOpsReadiness(nextOpsReadiness);
       setRuntimeConfig(nextRuntimeConfig);
+      setRuntimeAudit(nextRuntimeAudit);
       setP0Summary(nextP0Summary);
       setSourceConfig(nextSourceConfig);
       setSourceFieldQuality(nextSourceFieldQuality);
@@ -248,6 +253,7 @@ export default function App() {
             opsHealth={opsHealth}
             opsReadiness={opsReadiness}
             runtimeConfig={runtimeConfig}
+            runtimeAudit={runtimeAudit}
             p0Summary={p0Summary}
             sourceConfig={sourceConfig}
             sourceFieldQuality={sourceFieldQuality}
@@ -1349,6 +1355,7 @@ function SourceView({
   opsHealth,
   opsReadiness,
   runtimeConfig,
+  runtimeAudit,
   p0Summary,
   sourceConfig,
   sourceFieldQuality,
@@ -1363,6 +1370,7 @@ function SourceView({
   opsHealth: OpsHealth | null;
   opsReadiness: OpsReadiness | null;
   runtimeConfig: RuntimeConfig | null;
+  runtimeAudit: RuntimeAudit | null;
   p0Summary: P0Summary | null;
   sourceConfig: SourceConfig | null;
   sourceFieldQuality: SourceFieldQuality | null;
@@ -1407,6 +1415,27 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>部署环境审计</h3>
+        {runtimeAudit ? (
+          <>
+            <div className="push-row">
+              <span>{runtimeAudit.status}</span>
+              <strong>{runtimeAudit.fail_count} 个阻断</strong>
+              <span>{runtimeAudit.warn_count} 个提醒</span>
+            </div>
+            {runtimeAudit.items.map((item) => (
+              <div className="push-row" key={item.key}>
+                <span>{item.label}</span>
+                <strong className={auditClass(item.status)}>{auditText(item.status)}</strong>
+                <span>{item.detail}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无部署环境审计</div>
+        )}
       </div>
       <div className="push-table">
         <h3>P0 验证摘要</h3>
@@ -1692,6 +1721,26 @@ function sourceConfigTone(readiness?: string) {
     return "neutral";
   }
   return "down";
+}
+
+function auditText(status: string) {
+  if (status === "ready") {
+    return "通过";
+  }
+  if (status === "fail") {
+    return "阻断";
+  }
+  return "提醒";
+}
+
+function auditClass(status: string) {
+  if (status === "ready") {
+    return "up";
+  }
+  if (status === "fail") {
+    return "down";
+  }
+  return "quality-tag partial";
 }
 
 function confidenceClass(level: string) {

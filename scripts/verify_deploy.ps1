@@ -25,6 +25,9 @@ Show-Json "ops-readiness" $opsReadiness
 $opsRuntime = Invoke-RestMethod "$BaseUrl/api/ops/runtime"
 Show-Json "ops-runtime" $opsRuntime
 
+$runtimeAudit = Invoke-RestMethod "$BaseUrl/api/ops/runtime-audit"
+Show-Json "runtime-audit" $runtimeAudit
+
 $p0Summary = Invoke-RestMethod "$BaseUrl/api/ops/p0-summary"
 Show-Json "p0-summary" $p0Summary
 

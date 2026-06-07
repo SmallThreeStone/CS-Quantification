@@ -124,7 +124,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.52"
+    assert body["version"] == "0.1.53"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -148,6 +148,80 @@ def test_ops_runtime_marks_none_push_as_unconfigured(db_session):
 
     assert response.status_code == 200
     assert response.json()["push_configured"] is False
+
+
+def test_ops_runtime_audit_flags_default_deploy_risks(db_session):
+    previous_database_url = settings.database_url
+    previous_provider = settings.market_provider
+    previous_orderbook = settings.steam_orderbook_enabled
+    previous_worker_sleep = settings.worker_sleep_seconds
+    previous_push_channel = settings.push_channel
+    previous_cors = settings.cors_origins
+    settings.database_url = "postgresql://cs_quant:cs_quant_password@postgres:5432/cs_quant"
+    settings.market_provider = "mock"
+    settings.steam_orderbook_enabled = False
+    settings.worker_sleep_seconds = 600
+    settings.push_channel = "none"
+    settings.cors_origins = "http://localhost,http://127.0.0.1:5173"
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/ops/runtime-audit")
+    finally:
+        settings.database_url = previous_database_url
+        settings.market_provider = previous_provider
+        settings.steam_orderbook_enabled = previous_orderbook
+        settings.worker_sleep_seconds = previous_worker_sleep
+        settings.push_channel = previous_push_channel
+        settings.cors_origins = previous_cors
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    items = {item["key"]: item for item in body["items"]}
+    assert body["status"] == "fail"
+    assert items["postgres_password"]["status"] == "fail"
+    assert items["market_provider"]["status"] == "warn"
+    assert items["orderbook"]["status"] == "warn"
+    assert items["push"]["status"] == "warn"
+    assert items["worker_sleep"]["status"] == "warn"
+    assert items["cors"]["status"] == "warn"
+
+
+def test_ops_runtime_audit_marks_production_shape_ready(db_session):
+    previous_database_url = settings.database_url
+    previous_provider = settings.market_provider
+    previous_orderbook = settings.steam_orderbook_enabled
+    previous_worker_sleep = settings.worker_sleep_seconds
+    previous_push_channel = settings.push_channel
+    previous_wechat = settings.wechat_webhook_url
+    previous_cors = settings.cors_origins
+    settings.database_url = "postgresql://cs_quant:strong_password@postgres:5432/cs_quant"
+    settings.market_provider = "steam"
+    settings.steam_orderbook_enabled = True
+    settings.worker_sleep_seconds = 30
+    settings.push_channel = "wechat"
+    settings.wechat_webhook_url = "https://example.test/webhook"
+    settings.cors_origins = "https://cs.example.test"
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/ops/runtime-audit")
+    finally:
+        settings.database_url = previous_database_url
+        settings.market_provider = previous_provider
+        settings.steam_orderbook_enabled = previous_orderbook
+        settings.worker_sleep_seconds = previous_worker_sleep
+        settings.push_channel = previous_push_channel
+        settings.wechat_webhook_url = previous_wechat
+        settings.cors_origins = previous_cors
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["fail_count"] == 0
+    assert body["warn_count"] == 0
 
 
 def test_ops_readiness_reports_empty_state(db_session):

@@ -203,6 +203,20 @@ export type RuntimeConfig = {
   cors_origin_count: number;
 };
 
+export type RuntimeAuditItem = {
+  key: string;
+  label: string;
+  status: "ready" | "warn" | "fail";
+  detail: string;
+};
+
+export type RuntimeAudit = {
+  status: "ready" | "warn" | "fail";
+  fail_count: number;
+  warn_count: number;
+  items: RuntimeAuditItem[];
+};
+
 export type FieldQuality = {
   field: string;
   label: string;

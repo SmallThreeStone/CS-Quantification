@@ -353,6 +353,20 @@ class RuntimeConfigOut(BaseModel):
     cors_origin_count: int
 
 
+class RuntimeAuditItemOut(BaseModel):
+    key: str
+    label: str
+    status: str
+    detail: str
+
+
+class RuntimeAuditOut(BaseModel):
+    status: str
+    fail_count: int
+    warn_count: int
+    items: list[RuntimeAuditItemOut]
+
+
 class OpsHealthOut(BaseModel):
     status: str
     latest_run_status: str

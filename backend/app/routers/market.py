@@ -38,6 +38,8 @@ from app.schemas.market import (
     OpsReadinessOut,
     RetentionCleanupOut,
     RuntimeConfigOut,
+    RuntimeAuditItemOut,
+    RuntimeAuditOut,
     PushRecordOut,
     SourceConfigOut,
     SourceFieldQualityOut,
@@ -57,7 +59,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.52"
+APP_VERSION = "0.1.53"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 SOURCE_FIELDS = [
@@ -88,6 +90,15 @@ def ops_runtime() -> RuntimeConfigOut:
         push_configured=_push_configured(),
         cors_origin_count=len([origin for origin in settings.cors_origins.split(",") if origin.strip()]),
     )
+
+
+@router.get("/ops/runtime-audit", response_model=RuntimeAuditOut)
+def ops_runtime_audit() -> RuntimeAuditOut:
+    items = _runtime_audit_items()
+    fail_count = sum(1 for item in items if item.status == "fail")
+    warn_count = sum(1 for item in items if item.status == "warn")
+    status = "fail" if fail_count else "warn" if warn_count else "ready"
+    return RuntimeAuditOut(status=status, fail_count=fail_count, warn_count=warn_count, items=items)
 
 
 @router.get("/ops/health", response_model=OpsHealthOut)
@@ -779,6 +790,69 @@ def _push_configured() -> bool:
     if channel == "qq":
         return bool(settings.qq_webhook_url)
     return False
+
+
+def _runtime_audit_items() -> list[RuntimeAuditItemOut]:
+    provider = settings.market_provider.lower()
+    database_kind = _database_kind(settings.database_url)
+    cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+    items = [
+        _audit_item(
+            "database",
+            "数据库",
+            "ready" if database_kind == "postgresql" else "warn",
+            "生产环境建议使用 PostgreSQL" if database_kind != "postgresql" else "已使用 PostgreSQL",
+        ),
+        _audit_item(
+            "postgres_password",
+            "数据库密码",
+            "fail" if _has_default_database_password(settings.database_url) else "ready",
+            "检测到默认数据库密码，请上线前修改" if _has_default_database_password(settings.database_url) else "未检测到默认数据库密码",
+        ),
+        _audit_item(
+            "market_provider",
+            "行情源",
+            "ready" if provider == "steam" else "warn",
+            "生产验证建议使用 Steam 数据源" if provider != "steam" else "已使用 Steam 数据源",
+        ),
+        _audit_item(
+            "orderbook",
+            "订单簿",
+            "ready" if settings.steam_orderbook_enabled else "warn",
+            "未开启订单簿时在售/求购深度会补位" if not settings.steam_orderbook_enabled else "已开启订单簿",
+        ),
+        _audit_item(
+            "push",
+            "推送",
+            "ready" if _push_configured() else "warn",
+            "未配置微信或 QQ Webhook，外部异动推送会跳过" if not _push_configured() else "推送通道已配置",
+        ),
+        _audit_item(
+            "worker_sleep",
+            "worker 间隔",
+            "ready" if 5 <= settings.worker_sleep_seconds <= 300 else "warn",
+            "建议保持 5-300 秒，避免过慢或过密轮询" if not 5 <= settings.worker_sleep_seconds <= 300 else "worker 轮询间隔在建议范围内",
+        ),
+        _audit_item(
+            "cors",
+            "CORS",
+            "warn" if _has_localhost_only_cors(cors_origins) else "ready",
+            "仅检测到 localhost，云服务器访问前请加入公网域名或地址" if _has_localhost_only_cors(cors_origins) else "CORS 已包含非本机来源或为空",
+        ),
+    ]
+    return items
+
+
+def _audit_item(key: str, label: str, status: str, detail: str) -> RuntimeAuditItemOut:
+    return RuntimeAuditItemOut(key=key, label=label, status=status, detail=detail)
+
+
+def _has_default_database_password(database_url: str) -> bool:
+    return "cs_quant_password" in database_url or "change_me" in database_url
+
+
+def _has_localhost_only_cors(origins: list[str]) -> bool:
+    return bool(origins) and all("localhost" in origin or "127.0.0.1" in origin for origin in origins)
 
 
 def _retention_metric(db: Session, model, date_column, name: str, retention_days: int | None, policy: str) -> RetentionMetricOut:
