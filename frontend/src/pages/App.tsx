@@ -24,6 +24,7 @@ import type {
   P0Summary,
   PushRecord,
   Retention,
+  RuntimeConfig,
   SourceConfig,
   SourceFieldQuality,
   StrategyConfig,
@@ -46,6 +47,7 @@ export default function App() {
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
+  const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   const [p0Summary, setP0Summary] = useState<P0Summary | null>(null);
   const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
@@ -72,6 +74,7 @@ export default function App() {
         nextPushRecords,
         nextOpsHealth,
         nextOpsReadiness,
+        nextRuntimeConfig,
         nextP0Summary,
         nextSourceConfig,
         nextSourceFieldQuality,
@@ -90,6 +93,7 @@ export default function App() {
         api.pushRecords(),
         api.opsHealth(),
         api.opsReadiness(),
+        api.opsRuntime(),
         api.p0Summary(),
         api.sourceConfig(),
         api.sourceFieldQuality(),
@@ -108,6 +112,7 @@ export default function App() {
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
       setOpsReadiness(nextOpsReadiness);
+      setRuntimeConfig(nextRuntimeConfig);
       setP0Summary(nextP0Summary);
       setSourceConfig(nextSourceConfig);
       setSourceFieldQuality(nextSourceFieldQuality);
@@ -242,6 +247,7 @@ export default function App() {
             collectRuns={collectRuns}
             opsHealth={opsHealth}
             opsReadiness={opsReadiness}
+            runtimeConfig={runtimeConfig}
             p0Summary={p0Summary}
             sourceConfig={sourceConfig}
             sourceFieldQuality={sourceFieldQuality}
@@ -1342,6 +1348,7 @@ function SourceView({
   collectRuns,
   opsHealth,
   opsReadiness,
+  runtimeConfig,
   p0Summary,
   sourceConfig,
   sourceFieldQuality,
@@ -1355,6 +1362,7 @@ function SourceView({
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
   opsReadiness: OpsReadiness | null;
+  runtimeConfig: RuntimeConfig | null;
   p0Summary: P0Summary | null;
   sourceConfig: SourceConfig | null;
   sourceFieldQuality: SourceFieldQuality | null;
@@ -1371,8 +1379,13 @@ function SourceView({
       <h2>数据源状态</h2>
       <div className="settings-grid">
         <Metric label="API 状态" value="在线" tone="up" />
+        <Metric label="运行版本" value={runtimeConfig ? `V${runtimeConfig.version}` : "暂无"} />
+        <Metric label="数据库" value={runtimeConfig?.database_kind ?? "暂无"} tone={runtimeConfig?.database_kind === "postgresql" ? "up" : "neutral"} />
         <Metric label="行情来源" value={sourceConfig ? sourceConfig.provider : "暂无"} tone={sourceConfigTone(sourceConfig?.readiness)} />
         <Metric label="订单簿" value={sourceConfig?.steam_orderbook_enabled ? "已开启" : "未开启"} tone={sourceConfig?.steam_orderbook_enabled ? "up" : "neutral"} />
+        <Metric label="推送配置" value={runtimeConfig ? `${runtimeConfig.push_channel}:${runtimeConfig.push_configured ? "已配置" : "未配置"}` : "暂无"} tone={runtimeConfig?.push_configured ? "up" : "neutral"} />
+        <Metric label="轮询间隔" value={runtimeConfig ? `${runtimeConfig.worker_sleep_seconds} 秒` : "暂无"} />
+        <Metric label="CORS 数量" value={runtimeConfig ? `${runtimeConfig.cors_origin_count} 个` : "暂无"} />
         <Metric label="NameID 覆盖" value={sourceConfig ? `${sourceConfig.active_nameid_count}/${sourceConfig.active_item_count}` : "暂无"} tone={sourceConfig && sourceConfig.active_nameid_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="监控饰品" value={`${items.length} 个`} />
         <Metric label="监控池" value={`${pools.length} 个`} />

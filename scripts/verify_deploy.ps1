@@ -22,6 +22,9 @@ Show-Json "ops-health" $opsHealth
 $opsReadiness = Invoke-RestMethod "$BaseUrl/api/ops/readiness"
 Show-Json "ops-readiness" $opsReadiness
 
+$opsRuntime = Invoke-RestMethod "$BaseUrl/api/ops/runtime"
+Show-Json "ops-runtime" $opsRuntime
+
 $p0Summary = Invoke-RestMethod "$BaseUrl/api/ops/p0-summary"
 Show-Json "p0-summary" $p0Summary
 

@@ -192,6 +192,17 @@ export type OpsReadiness = {
   latest_run_at: string | null;
 };
 
+export type RuntimeConfig = {
+  version: string;
+  database_kind: string;
+  market_provider: string;
+  steam_orderbook_enabled: boolean;
+  worker_sleep_seconds: number;
+  push_channel: string;
+  push_configured: boolean;
+  cors_origin_count: number;
+};
+
 export type FieldQuality = {
   field: string;
   label: string;

@@ -37,6 +37,7 @@ from app.schemas.market import (
     P0SummaryOut,
     OpsReadinessOut,
     RetentionCleanupOut,
+    RuntimeConfigOut,
     PushRecordOut,
     SourceConfigOut,
     SourceFieldQualityOut,
@@ -56,6 +57,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
+APP_VERSION = "0.1.52"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 SOURCE_FIELDS = [
@@ -71,7 +73,21 @@ EXPECTED_ALERT_TYPES = ["在售变化", "求购变化", "底价变化", "价格�
 
 @router.get("/health", response_model=HealthOut)
 def health() -> HealthOut:
-    return HealthOut(status="ok", service="cs-quantification-api", version="0.1")
+    return HealthOut(status="ok", service="cs-quantification-api", version=APP_VERSION)
+
+
+@router.get("/ops/runtime", response_model=RuntimeConfigOut)
+def ops_runtime() -> RuntimeConfigOut:
+    return RuntimeConfigOut(
+        version=APP_VERSION,
+        database_kind=_database_kind(settings.database_url),
+        market_provider=settings.market_provider.lower(),
+        steam_orderbook_enabled=settings.steam_orderbook_enabled,
+        worker_sleep_seconds=settings.worker_sleep_seconds,
+        push_channel=settings.push_channel.lower(),
+        push_configured=_push_configured(),
+        cors_origin_count=len([origin for origin in settings.cors_origins.split(",") if origin.strip()]),
+    )
 
 
 @router.get("/ops/health", response_model=OpsHealthOut)
@@ -746,6 +762,23 @@ def _ops_status(
     if source_error_count > 0 or any(run.status == "partial" for run in runs):
         return "warn"
     return "ok"
+
+
+def _database_kind(database_url: str) -> str:
+    if database_url.startswith("postgresql"):
+        return "postgresql"
+    if database_url.startswith("sqlite"):
+        return "sqlite"
+    return "unknown"
+
+
+def _push_configured() -> bool:
+    channel = settings.push_channel.lower()
+    if channel == "wechat":
+        return bool(settings.wechat_webhook_url)
+    if channel == "qq":
+        return bool(settings.qq_webhook_url)
+    return False
 
 
 def _retention_metric(db: Session, model, date_column, name: str, retention_days: int | None, policy: str) -> RetentionMetricOut:

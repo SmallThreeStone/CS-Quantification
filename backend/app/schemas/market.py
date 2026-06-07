@@ -342,6 +342,17 @@ class HealthOut(BaseModel):
     version: str
 
 
+class RuntimeConfigOut(BaseModel):
+    version: str
+    database_kind: str
+    market_provider: str
+    steam_orderbook_enabled: bool
+    worker_sleep_seconds: int
+    push_channel: str
+    push_configured: bool
+    cors_origin_count: int
+
+
 class OpsHealthOut(BaseModel):
     status: str
     latest_run_status: str

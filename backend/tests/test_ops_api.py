@@ -93,6 +93,63 @@ def test_ops_health_fails_when_recent_runs_all_failed(db_session):
     assert response.json()["status"] == "fail"
 
 
+def test_ops_runtime_reports_safe_runtime_config(db_session):
+    previous_database_url = settings.database_url
+    previous_provider = settings.market_provider
+    previous_orderbook = settings.steam_orderbook_enabled
+    previous_worker_sleep = settings.worker_sleep_seconds
+    previous_push_channel = settings.push_channel
+    previous_wechat = settings.wechat_webhook_url
+    previous_cors = settings.cors_origins
+    settings.database_url = "postgresql+psycopg://user:secret@db/cs"
+    settings.market_provider = "steam"
+    settings.steam_orderbook_enabled = True
+    settings.worker_sleep_seconds = 45
+    settings.push_channel = "wechat"
+    settings.wechat_webhook_url = "https://example.test/webhook"
+    settings.cors_origins = "http://localhost:5173,https://cs.example.test"
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/ops/runtime")
+    finally:
+        settings.database_url = previous_database_url
+        settings.market_provider = previous_provider
+        settings.steam_orderbook_enabled = previous_orderbook
+        settings.worker_sleep_seconds = previous_worker_sleep
+        settings.push_channel = previous_push_channel
+        settings.wechat_webhook_url = previous_wechat
+        settings.cors_origins = previous_cors
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["version"] == "0.1.52"
+    assert body["database_kind"] == "postgresql"
+    assert body["market_provider"] == "steam"
+    assert body["steam_orderbook_enabled"] is True
+    assert body["worker_sleep_seconds"] == 45
+    assert body["push_channel"] == "wechat"
+    assert body["push_configured"] is True
+    assert body["cors_origin_count"] == 2
+    assert "secret" not in json.dumps(body)
+
+
+def test_ops_runtime_marks_none_push_as_unconfigured(db_session):
+    previous_push_channel = settings.push_channel
+    settings.push_channel = "none"
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+    try:
+        response = client.get("/api/ops/runtime")
+    finally:
+        settings.push_channel = previous_push_channel
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["push_configured"] is False
+
+
 def test_ops_readiness_reports_empty_state(db_session):
     app.dependency_overrides[get_db] = override_session(db_session)
     client = TestClient(app)

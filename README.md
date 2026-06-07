@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.51 — 增加 worker 调度间隔配置
+V0.1.52 — 增加运行时配置体检
 
 ## 功能范围
 
@@ -31,6 +31,7 @@ V0.1.51 — 增加 worker 调度间隔配置
 - Steam NameID 批量维护：支持批量发现缺失 ID 和批量验证订单簿深度
 - 监控池：重点池、观察池、事件池分组，支持新增、编辑池名称、采集间隔和说明，worker 按池间隔采集
 - worker 调度：支持通过 `WORKER_SLEEP_SECONDS` 配置后台轮询间隔
+- 运行时体检：数据源状态页和部署验证脚本展示版本、数据库类型、推送配置、worker 间隔和 CORS 数量
 - 告警回测：记录告警后多窗口价格变化、胜率和平均变化
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
 - 数据源状态：展示 Mock / Steam 适配层、订单簿开关、真实字段占比、补位字段、fallback 次数、最近错误和运维健康指标
@@ -139,6 +140,7 @@ docker compose up -d --build
 - `GET /api/health`
 - `GET /api/ops/health`
 - `GET /api/ops/readiness`
+- `GET /api/ops/runtime`
 - `GET /api/ops/p0-summary`
 - `GET /api/source/config`
 - `GET /api/source/field-quality`
@@ -185,6 +187,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.52 — 增加运行时配置体检，展示版本、数据库类型、数据源、推送配置、worker 间隔和 CORS 数量。
 - V0.1.51 — 增加 worker 调度间隔配置，支持通过 `WORKER_SLEEP_SECONDS` 调整后台轮询频率。
 - V0.1.50 — 补齐 Docker Compose 中 backend 和 worker 的 Steam 订单簿环境变量透传。
 - V0.1.49 — 增加告警覆盖摘要，展示告警类型覆盖、近 24h 告警、可追溯快照比例和最近告警。
