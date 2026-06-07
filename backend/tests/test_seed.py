@@ -59,3 +59,42 @@ def test_monitor_coverage_marks_below_p1_scope(db_session):
     body = response.json()
     assert body["status"] == "below_p1"
     assert body["active_item_count"] == 1
+
+
+def test_steam_nameid_todo_reports_missing_seed_items(db_session):
+    seed_defaults(db_session)
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/steam-nameids/todo")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    pools = {pool["name"]: pool for pool in body["pools"]}
+    assert body["status"] == "missing"
+    assert body["active_item_count"] == 100
+    assert body["missing_count"] == 100
+    assert body["coverage_rate"] == 0
+    assert body["discoverable_count"] == 100
+    assert len(body["missing_items"]) == 20
+    assert pools["观察池"]["active_count"] == 98
+    assert pools["重点池"]["active_count"] == 2
+
+
+def test_steam_nameid_todo_reports_partial_coverage(db_session):
+    seed_defaults(db_session)
+    item = db_session.query(Item).filter_by(display_name="超导体").one()
+    item.steam_item_nameid = "123"
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/steam-nameids/todo")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "partial"
+    assert body["missing_count"] == 99
+    assert body["coverage_rate"] == 0.01

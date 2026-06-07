@@ -399,6 +399,24 @@ class MonitorCoverageOut(BaseModel):
     categories: list[MonitorCoverageBucketOut]
 
 
+class SteamNameIdTodoItemOut(BaseModel):
+    item_id: int
+    display_name: str
+    market_hash_name: str
+    pool_name: str | None
+    category: str
+
+
+class SteamNameIdTodoOut(BaseModel):
+    status: str
+    active_item_count: int
+    missing_count: int
+    coverage_rate: float
+    discoverable_count: int
+    pools: list[MonitorCoverageBucketOut]
+    missing_items: list[SteamNameIdTodoItemOut]
+
+
 class OpsHealthOut(BaseModel):
     status: str
     latest_run_status: str

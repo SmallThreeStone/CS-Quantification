@@ -22,6 +22,7 @@ import type {
   RuntimeConfig,
   SourceConfig,
   SourceFieldQuality,
+  SteamNameIdTodo,
   StrategyConfig,
   StrategyConfigUpdate,
   TuningSuggestion
@@ -130,6 +131,7 @@ export const api = {
   discoverMissingSteamNameIds: () =>
     request<SteamNameIdBatchResult>("/api/steam-nameids/discover-missing", { method: "POST" }),
   validateAllSteamNameIds: () => request<SteamNameIdBatchResult>("/api/steam-nameids/validate-all", { method: "POST" }),
+  steamNameIdTodo: () => request<SteamNameIdTodo>("/api/steam-nameids/todo"),
   strategy: () => request<StrategyConfig>("/api/strategy"),
   updateStrategy: (payload: StrategyConfigUpdate) =>
     request<StrategyConfig>("/api/strategy", {

@@ -249,6 +249,24 @@ export type MonitorCoverage = {
   categories: MonitorCoverageBucket[];
 };
 
+export type SteamNameIdTodoItem = {
+  item_id: number;
+  display_name: string;
+  market_hash_name: string;
+  pool_name: string | null;
+  category: string;
+};
+
+export type SteamNameIdTodo = {
+  status: "ready" | "partial" | "missing";
+  active_item_count: number;
+  missing_count: number;
+  coverage_rate: number;
+  discoverable_count: number;
+  pools: MonitorCoverageBucket[];
+  missing_items: SteamNameIdTodoItem[];
+};
+
 export type FieldQuality = {
   field: string;
   label: string;

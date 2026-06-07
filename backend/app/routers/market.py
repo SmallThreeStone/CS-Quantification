@@ -30,6 +30,8 @@ from app.schemas.market import (
     ItemUpdate,
     SteamOrderbookValidationOut,
     SteamNameIdBatchOut,
+    SteamNameIdTodoItemOut,
+    SteamNameIdTodoOut,
     SteamNameIdOut,
     MonitorPoolCreate,
     MonitorCoverageBucketOut,
@@ -63,7 +65,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.56"
+APP_VERSION = "0.1.57"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 SOURCE_FIELDS = [
@@ -664,6 +666,32 @@ def discover_missing_steam_nameids(db: Session = Depends(get_db)) -> SteamNameId
     return _batch_result(results)
 
 
+@router.get("/steam-nameids/todo", response_model=SteamNameIdTodoOut)
+def steam_nameid_todo(db: Session = Depends(get_db)) -> SteamNameIdTodoOut:
+    active_items = db.query(Item).filter_by(is_active=True).order_by(Item.display_name.asc()).all()
+    missing_items = [item for item in active_items if not item.steam_item_nameid]
+    active_count = len(active_items)
+    missing_count = len(missing_items)
+    return SteamNameIdTodoOut(
+        status="ready" if missing_count == 0 else "partial" if missing_count < active_count else "missing",
+        active_item_count=active_count,
+        missing_count=missing_count,
+        coverage_rate=(active_count - missing_count) / active_count if active_count else 0,
+        discoverable_count=missing_count,
+        pools=_steam_nameid_pool_todo(missing_items),
+        missing_items=[
+            SteamNameIdTodoItemOut(
+                item_id=item.id,
+                display_name=item.display_name,
+                market_hash_name=item.market_hash_name,
+                pool_name=item.pool.name if item.pool else None,
+                category=item.category,
+            )
+            for item in missing_items[:20]
+        ],
+    )
+
+
 @router.post("/items/{item_id}/steam-nameid/validate", response_model=SteamOrderbookValidationOut)
 def validate_item_steam_nameid(item_id: int, db: Session = Depends(get_db)) -> SteamOrderbookValidationOut:
     item = db.get(Item, item_id)
@@ -733,6 +761,17 @@ def _batch_result(results: list[SteamOrderbookValidationOut]) -> SteamNameIdBatc
         failure_count=len(results) - success_count,
         results=results,
     )
+
+
+def _steam_nameid_pool_todo(missing_items: list[Item]) -> list[MonitorCoverageBucketOut]:
+    counts: dict[str, int] = {}
+    for item in missing_items:
+        pool_name = item.pool.name if item.pool else "未分组"
+        counts[pool_name] = counts.get(pool_name, 0) + 1
+    return [
+        MonitorCoverageBucketOut(name=name, active_count=count, total_count=count)
+        for name, count in sorted(counts.items(), key=lambda row: row[1], reverse=True)
+    ]
 
 
 @router.get("/monitor-pools", response_model=list[MonitorPoolOut])

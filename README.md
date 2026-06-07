@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.56 — 增加监控范围摘要
+V0.1.57 — 增加 Steam NameID 待办摘要
 
 ## 功能范围
 
@@ -27,6 +27,7 @@ V0.1.56 — 增加监控范围摘要
 - 策略配置：在售变化、求购变化、底价变化、价格波动异常、成交量异常、冷却时间和可信度最大降权可调
 - 饰品管理：新增、编辑、停用、恢复监控饰品
 - 饰品 Steam NameID：在饰品管理中维护订单簿 `item_nameid`
+- Steam NameID 待办：展示覆盖率、缺失数量、按监控池分布和前 20 个待补齐饰品
 - Steam NameID 发现：可从饰品管理页触发自动发现并写回字段
 - Steam 订单簿验证：可在饰品管理页校验 NameID 是否能获取真实在售/求购深度
 - Steam NameID 批量维护：支持批量发现缺失 ID 和批量验证订单簿深度
@@ -162,6 +163,7 @@ docker compose up -d --build
 - `GET /api/items/{item_id}/history/buy`
 - `PUT /api/items/{item_id}`
 - `PATCH /api/items/{item_id}/active`
+- `GET /api/steam-nameids/todo`
 - `GET /api/alerts/coverage`
 - `GET /api/monitor-pools`
 - `POST /api/monitor-pools`
@@ -193,6 +195,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.57 — 增加 Steam NameID 待办摘要，展示覆盖率、缺失数量、监控池分布和前 20 个待补齐饰品。
 - V0.1.56 — 增加监控范围摘要，展示 P1 范围状态、缺失 Steam NameID、监控池和品类分布。
 - V0.1.55 — 扩充默认监控饰品到 100 个，覆盖常见武器、手套、刀、箱子、贴纸和胶囊。
 - V0.1.54 — 增加上线验收摘要，按 15 条上线前验收标准汇总通过、待复盘和阻断项。

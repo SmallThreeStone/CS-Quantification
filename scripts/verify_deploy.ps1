@@ -46,6 +46,9 @@ Show-Json "monitor" @{ count = $monitor.Count }
 $monitorCoverage = Invoke-RestMethod "$BaseUrl/api/monitor/coverage"
 Show-Json "monitor-coverage" $monitorCoverage
 
+$nameIdTodo = Invoke-RestMethod "$BaseUrl/api/steam-nameids/todo"
+Show-Json "steam-nameid-todo" $nameIdTodo
+
 $runs = Invoke-RestMethod "$BaseUrl/api/collect-runs"
 Show-Json "collect-runs" @{ count = $runs.Count; latest = if ($runs.Count) { $runs[0] } else { $null } }
 

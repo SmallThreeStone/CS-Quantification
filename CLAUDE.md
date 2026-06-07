@@ -117,7 +117,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.56 — 增加监控范围摘要
+V0.1.57 — 增加 Steam NameID 待办摘要
 
 ## 环境要求
 

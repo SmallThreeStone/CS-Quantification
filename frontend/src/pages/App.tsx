@@ -30,6 +30,7 @@ import type {
   RuntimeConfig,
   SourceConfig,
   SourceFieldQuality,
+  SteamNameIdTodo,
   StrategyConfig,
   StrategyConfigUpdate,
   TuningSuggestion
@@ -57,6 +58,7 @@ export default function App() {
   const [p0Summary, setP0Summary] = useState<P0Summary | null>(null);
   const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
+  const [steamNameIdTodo, setSteamNameIdTodo] = useState<SteamNameIdTodo | null>(null);
   const [retention, setRetention] = useState<Retention | null>(null);
   const [backtests, setBacktests] = useState<BacktestResult[]>([]);
   const [backtestSummary, setBacktestSummary] = useState<BacktestSummary[]>([]);
@@ -87,6 +89,7 @@ export default function App() {
         nextP0Summary,
         nextSourceConfig,
         nextSourceFieldQuality,
+        nextSteamNameIdTodo,
         nextRetention,
         nextBacktests,
         nextBacktestSummary,
@@ -109,6 +112,7 @@ export default function App() {
         api.p0Summary(),
         api.sourceConfig(),
         api.sourceFieldQuality(),
+        api.steamNameIdTodo(),
         api.retention(),
         api.backtests(),
         api.backtestSummary(),
@@ -131,6 +135,7 @@ export default function App() {
       setP0Summary(nextP0Summary);
       setSourceConfig(nextSourceConfig);
       setSourceFieldQuality(nextSourceFieldQuality);
+      setSteamNameIdTodo(nextSteamNameIdTodo);
       setRetention(nextRetention);
       setBacktests(nextBacktests);
       setBacktestSummary(nextBacktestSummary);
@@ -269,6 +274,7 @@ export default function App() {
             p0Summary={p0Summary}
             sourceConfig={sourceConfig}
             sourceFieldQuality={sourceFieldQuality}
+            steamNameIdTodo={steamNameIdTodo}
             retention={retention}
           />
         )}
@@ -1373,6 +1379,7 @@ function SourceView({
   p0Summary,
   sourceConfig,
   sourceFieldQuality,
+  steamNameIdTodo,
   retention
 }: {
   items: MonitorItem[];
@@ -1390,6 +1397,7 @@ function SourceView({
   p0Summary: P0Summary | null;
   sourceConfig: SourceConfig | null;
   sourceFieldQuality: SourceFieldQuality | null;
+  steamNameIdTodo: SteamNameIdTodo | null;
   retention: Retention | null;
 }) {
   const hasSnapshots = items.some((item) => item.latest_snapshot);
@@ -1459,6 +1467,35 @@ function SourceView({
           </>
         ) : (
           <div className="empty">暂无监控范围摘要</div>
+        )}
+      </div>
+      <div className="push-table">
+        <h3>Steam NameID 待办</h3>
+        {steamNameIdTodo ? (
+          <>
+            <div className="push-row">
+              <span>{steamNameIdTodo.status}</span>
+              <strong>{formatPercent(steamNameIdTodo.coverage_rate)}</strong>
+              <span>缺失 {steamNameIdTodo.missing_count}/{steamNameIdTodo.active_item_count}</span>
+              <span>可发现 {steamNameIdTodo.discoverable_count}</span>
+            </div>
+            {steamNameIdTodo.pools.map((pool) => (
+              <div className="push-row" key={pool.name}>
+                <span>{pool.name}</span>
+                <strong>{pool.active_count} 个缺失</strong>
+              </div>
+            ))}
+            {steamNameIdTodo.missing_items.map((item) => (
+              <div className="push-row" key={item.item_id}>
+                <span>{item.display_name}</span>
+                <strong>{item.pool_name ?? "未分组"}</strong>
+                <span>{item.category || "未分类"}</span>
+                <span>{item.market_hash_name}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无 Steam NameID 待办</div>
         )}
       </div>
       <div className="push-table">
