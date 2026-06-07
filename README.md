@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.50 — 补齐订单簿容器环境变量
+V0.1.51 — 增加 worker 调度间隔配置
 
 ## 功能范围
 
@@ -30,6 +30,7 @@ V0.1.50 — 补齐订单簿容器环境变量
 - Steam 订单簿验证：可在饰品管理页校验 NameID 是否能获取真实在售/求购深度
 - Steam NameID 批量维护：支持批量发现缺失 ID 和批量验证订单簿深度
 - 监控池：重点池、观察池、事件池分组，支持新增、编辑池名称、采集间隔和说明，worker 按池间隔采集
+- worker 调度：支持通过 `WORKER_SLEEP_SECONDS` 配置后台轮询间隔
 - 告警回测：记录告警后多窗口价格变化、胜率和平均变化
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
 - 数据源状态：展示 Mock / Steam 适配层、订单簿开关、真实字段占比、补位字段、fallback 次数、最近错误和运维健康指标
@@ -51,6 +52,7 @@ V0.1.50 — 补齐订单簿容器环境变量
 POSTGRES_PASSWORD=change_me
 MARKET_PROVIDER=mock
 STEAM_ORDERBOOK_ENABLED=false
+WORKER_SLEEP_SECONDS=60
 PUSH_CHANNEL=none
 ```
 
@@ -183,6 +185,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.51 — 增加 worker 调度间隔配置，支持通过 `WORKER_SLEEP_SECONDS` 调整后台轮询频率。
 - V0.1.50 — 补齐 Docker Compose 中 backend 和 worker 的 Steam 订单簿环境变量透传。
 - V0.1.49 — 增加告警覆盖摘要，展示告警类型覆盖、近 24h 告警、可追溯快照比例和最近告警。
 - V0.1.48 — 增加 P0 验证摘要，聚合数据源配置、连续采集、字段真实率、告警数量、阻塞项和复盘检查项。

@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     market_provider: str = "mock"
     steam_orderbook_enabled: bool = False
     steam_orderbook_item_nameids: str = "{}"
+    worker_sleep_seconds: int = 60
     push_channel: str = "none"
     wechat_webhook_url: str = ""
     qq_webhook_url: str = ""

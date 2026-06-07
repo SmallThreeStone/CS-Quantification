@@ -1,5 +1,6 @@
 import time
 
+from app.config import settings
 from app.database import SessionLocal
 from app.main import create_app
 from app.services.backtest_service import BacktestService
@@ -21,10 +22,11 @@ def run_once() -> int:
 
 
 def main() -> None:
+    sleep_seconds = max(1, settings.worker_sleep_seconds)
     while True:
         count = run_once()
         print(f"collected active items, alerts={count}", flush=True)
-        time.sleep(600)
+        time.sleep(sleep_seconds)
 
 
 if __name__ == "__main__":
