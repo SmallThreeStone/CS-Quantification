@@ -117,7 +117,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.57 — 增加 Steam NameID 待办摘要
+V0.1.58 — 增加 MVP 范围摘要
 
 ## 环境要求
 

@@ -39,6 +39,8 @@ from app.schemas.market import (
     MonitorPoolOut,
     MonitorPoolUpdate,
     MonitorItemOut,
+    MvpScopeItemOut,
+    MvpScopeOut,
     OpsHealthOut,
     P0SummaryOut,
     OpsReadinessOut,
@@ -65,7 +67,7 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.57"
+APP_VERSION = "0.1.58"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 SOURCE_FIELDS = [
@@ -180,6 +182,63 @@ def p0_summary(db: Session = Depends(get_db)) -> P0SummaryOut:
 @router.get("/ops/acceptance", response_model=AcceptanceOut)
 def ops_acceptance(db: Session = Depends(get_db)) -> AcceptanceOut:
     return _ops_acceptance(db)
+
+
+@router.get("/ops/mvp-scope", response_model=MvpScopeOut)
+def ops_mvp_scope(db: Session = Depends(get_db)) -> MvpScopeOut:
+    monitor_count = db.query(Item).filter_by(is_active=True).count()
+    snapshot_count = db.query(MarketSnapshot).count()
+    alert_count = db.query(Alert).count()
+    backtest_count = db.query(BacktestResult).count()
+    strategy_ready = db.query(StrategyConfig).filter_by(name="default").first() is not None
+    push_count = db.query(PushRecord).count()
+    push_ready = _push_configured() or push_count > 0
+    items = [
+        _mvp_scope_item(
+            "monitor_overview",
+            "监控总览页",
+            "ready" if monitor_count > 0 else "review",
+            f"启用监控饰品 {monitor_count} 个，列表已支持排序和决策信号展示",
+        ),
+        _mvp_scope_item(
+            "item_detail",
+            "饰品详情页",
+            "ready" if snapshot_count > 0 else "review",
+            f"行情快照 {snapshot_count} 条，详情页已包含走势、热力图和历史告警",
+        ),
+        _mvp_scope_item(
+            "alert_center",
+            "异动告警页",
+            "ready" if alert_count > 0 else "review",
+            f"告警 {alert_count} 条，页面已支持饰品、类型、严重度和平台筛选",
+        ),
+        _mvp_scope_item(
+            "opportunity_board",
+            "机会榜页",
+            "ready" if strategy_ready else "review",
+            "默认策略已启用，机会榜按买入、卖压、扫货、波动和观察候选分组",
+        ),
+        _mvp_scope_item(
+            "push_module",
+            "推送模块",
+            "ready" if push_ready else "review",
+            f"推送渠道 {_push_channel_label()}，历史推送记录 {push_count} 条，未配置时记录 skipped",
+        ),
+        _mvp_scope_item(
+            "alert_history_digest",
+            "历史告警简报",
+            "ready" if alert_count > 0 or backtest_count > 0 else "review",
+            f"告警 {alert_count} 条，回测 {backtest_count} 条，推送和详情页可展示近 3 次同类简报",
+        ),
+    ]
+    review_count = sum(1 for item in items if item.status == "review")
+    return MvpScopeOut(
+        status="review" if review_count else "ready",
+        ready_count=sum(1 for item in items if item.status == "ready"),
+        review_count=review_count,
+        item_count=len(items),
+        items=items,
+    )
 
 
 def _ops_acceptance(db: Session) -> AcceptanceOut:
@@ -1093,6 +1152,19 @@ def _has_localhost_only_cors(origins: list[str]) -> bool:
 
 def _acceptance_item(key: str, label: str, status: str, evidence: str) -> AcceptanceItemOut:
     return AcceptanceItemOut(key=key, label=label, status=status, evidence=evidence)
+
+
+def _mvp_scope_item(key: str, label: str, status: str, evidence: str) -> MvpScopeItemOut:
+    return MvpScopeItemOut(key=key, label=label, status=status, evidence=evidence)
+
+
+def _push_channel_label() -> str:
+    channel = settings.push_channel.lower()
+    if channel == "wechat":
+        return "微信"
+    if channel == "qq":
+        return "QQ"
+    return channel
 
 
 def _field_acceptance_status(field_quality: SourceFieldQualityOut, field: str, orderbook_enabled: bool) -> str:

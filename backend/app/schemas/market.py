@@ -382,6 +382,21 @@ class AcceptanceOut(BaseModel):
     items: list[AcceptanceItemOut]
 
 
+class MvpScopeItemOut(BaseModel):
+    key: str
+    label: str
+    status: str
+    evidence: str
+
+
+class MvpScopeOut(BaseModel):
+    status: str
+    ready_count: int
+    review_count: int
+    item_count: int
+    items: list[MvpScopeItemOut]
+
+
 class MonitorCoverageBucketOut(BaseModel):
     name: str
     active_count: int

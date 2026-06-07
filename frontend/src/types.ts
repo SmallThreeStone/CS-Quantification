@@ -232,6 +232,21 @@ export type Acceptance = {
   items: AcceptanceItem[];
 };
 
+export type MvpScopeItem = {
+  key: string;
+  label: string;
+  status: "ready" | "review";
+  evidence: string;
+};
+
+export type MvpScope = {
+  status: "ready" | "review";
+  ready_count: number;
+  review_count: number;
+  item_count: number;
+  items: MvpScopeItem[];
+};
+
 export type MonitorCoverageBucket = {
   name: string;
   active_count: number;

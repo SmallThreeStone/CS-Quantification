@@ -21,6 +21,7 @@ import type {
   MonitorPool,
   MonitorPoolInput,
   MonitorItem,
+  MvpScope,
   OpsHealth,
   OpsReadiness,
   P0Summary,
@@ -55,6 +56,7 @@ export default function App() {
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   const [runtimeAudit, setRuntimeAudit] = useState<RuntimeAudit | null>(null);
   const [acceptance, setAcceptance] = useState<Acceptance | null>(null);
+  const [mvpScope, setMvpScope] = useState<MvpScope | null>(null);
   const [p0Summary, setP0Summary] = useState<P0Summary | null>(null);
   const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [sourceFieldQuality, setSourceFieldQuality] = useState<SourceFieldQuality | null>(null);
@@ -86,6 +88,7 @@ export default function App() {
         nextRuntimeConfig,
         nextRuntimeAudit,
         nextAcceptance,
+        nextMvpScope,
         nextP0Summary,
         nextSourceConfig,
         nextSourceFieldQuality,
@@ -109,6 +112,7 @@ export default function App() {
         api.opsRuntime(),
         api.opsRuntimeAudit(),
         api.opsAcceptance(),
+        api.opsMvpScope(),
         api.p0Summary(),
         api.sourceConfig(),
         api.sourceFieldQuality(),
@@ -132,6 +136,7 @@ export default function App() {
       setRuntimeConfig(nextRuntimeConfig);
       setRuntimeAudit(nextRuntimeAudit);
       setAcceptance(nextAcceptance);
+      setMvpScope(nextMvpScope);
       setP0Summary(nextP0Summary);
       setSourceConfig(nextSourceConfig);
       setSourceFieldQuality(nextSourceFieldQuality);
@@ -271,6 +276,7 @@ export default function App() {
             runtimeConfig={runtimeConfig}
             runtimeAudit={runtimeAudit}
             acceptance={acceptance}
+            mvpScope={mvpScope}
             p0Summary={p0Summary}
             sourceConfig={sourceConfig}
             sourceFieldQuality={sourceFieldQuality}
@@ -1376,6 +1382,7 @@ function SourceView({
   runtimeConfig,
   runtimeAudit,
   acceptance,
+  mvpScope,
   p0Summary,
   sourceConfig,
   sourceFieldQuality,
@@ -1394,6 +1401,7 @@ function SourceView({
   runtimeConfig: RuntimeConfig | null;
   runtimeAudit: RuntimeAudit | null;
   acceptance: Acceptance | null;
+  mvpScope: MvpScope | null;
   p0Summary: P0Summary | null;
   sourceConfig: SourceConfig | null;
   sourceFieldQuality: SourceFieldQuality | null;
@@ -1439,6 +1447,27 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>MVP 范围摘要</h3>
+        {mvpScope ? (
+          <>
+            <div className="push-row">
+              <span>{mvpScope.status}</span>
+              <strong>{mvpScope.ready_count}/{mvpScope.item_count} 项具备</strong>
+              <span>{mvpScope.review_count} 项待复核</span>
+            </div>
+            {mvpScope.items.map((item) => (
+              <div className="push-row" key={item.key}>
+                <span>{item.label}</span>
+                <strong className={mvpScopeClass(item.status)}>{mvpScopeText(item.status)}</strong>
+                <span>{item.evidence}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无 MVP 范围摘要</div>
+        )}
       </div>
       <div className="push-table">
         <h3>监控范围摘要</h3>
@@ -1873,6 +1902,20 @@ function acceptanceClass(status: string) {
   }
   if (status === "blocked") {
     return "down";
+  }
+  return "quality-tag partial";
+}
+
+function mvpScopeText(status: string) {
+  if (status === "ready") {
+    return "具备";
+  }
+  return "待复核";
+}
+
+function mvpScopeClass(status: string) {
+  if (status === "ready") {
+    return "up";
   }
   return "quality-tag partial";
 }

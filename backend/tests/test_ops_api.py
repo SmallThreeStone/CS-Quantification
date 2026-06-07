@@ -124,7 +124,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.57"
+    assert body["version"] == "0.1.58"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -222,6 +222,54 @@ def test_ops_runtime_audit_marks_production_shape_ready(db_session):
     assert body["status"] == "ready"
     assert body["fail_count"] == 0
     assert body["warn_count"] == 0
+
+
+def test_ops_mvp_scope_reports_review_for_empty_state(db_session):
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/mvp-scope")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    items = {item["key"]: item for item in body["items"]}
+    assert body["status"] == "review"
+    assert body["item_count"] == 6
+    assert body["review_count"] >= 1
+    assert items["monitor_overview"]["status"] == "review"
+    assert items["push_module"]["status"] == "review"
+
+
+def test_ops_mvp_scope_marks_core_panels_ready(db_session):
+    alert = create_ops_fixture(db_session)
+    db_session.add(StrategyConfig(name="default"))
+    db_session.add(
+        PushRecord(
+            alert_id=alert.id,
+            channel="wechat",
+            status="sent",
+            target="wechat",
+            message="ok",
+            sent_at=datetime.utcnow(),
+        )
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/mvp-scope")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    items = {item["key"]: item for item in body["items"]}
+    assert body["status"] == "ready"
+    assert body["ready_count"] == 6
+    assert items["monitor_overview"]["status"] == "ready"
+    assert items["item_detail"]["status"] == "ready"
+    assert items["alert_center"]["status"] == "ready"
+    assert items["push_module"]["status"] == "ready"
 
 
 def test_ops_acceptance_reports_review_for_empty_state(db_session):

@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.57 — 增加 Steam NameID 待办摘要
+V0.1.58 — 增加 MVP 范围摘要
 
 ## 功能范围
 
@@ -36,6 +36,7 @@ V0.1.57 — 增加 Steam NameID 待办摘要
 - 运行时体检：数据源状态页和部署验证脚本展示版本、数据库类型、推送配置、worker 间隔和 CORS 数量
 - 部署环境审计：检查数据库类型、默认密码、行情源、订单簿、推送、worker 间隔和 CORS 配置风险
 - 上线验收摘要：按 15 条上线前验收标准汇总通过、待复盘和阻断项，并展示证据
+- MVP 范围摘要：汇总监控总览、饰品详情、异动告警、机会榜、推送模块和历史告警简报的具备状态
 - 告警回测：记录告警后多窗口价格变化、胜率和平均变化
 - 采集日志：记录每轮采集的状态、耗时、快照数、告警数和错误数
 - 数据源状态：展示 Mock / Steam 适配层、订单簿开关、真实字段占比、补位字段、fallback 次数、最近错误和运维健康指标
@@ -147,6 +148,7 @@ docker compose up -d --build
 - `GET /api/ops/runtime`
 - `GET /api/ops/runtime-audit`
 - `GET /api/ops/acceptance`
+- `GET /api/ops/mvp-scope`
 - `GET /api/ops/p0-summary`
 - `GET /api/source/config`
 - `GET /api/source/field-quality`
@@ -195,6 +197,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.58 — 增加 MVP 范围摘要，汇总 P1 页面与模块具备状态并纳入部署验证脚本。
 - V0.1.57 — 增加 Steam NameID 待办摘要，展示覆盖率、缺失数量、监控池分布和前 20 个待补齐饰品。
 - V0.1.56 — 增加监控范围摘要，展示 P1 范围状态、缺失 Steam NameID、监控池和品类分布。
 - V0.1.55 — 扩充默认监控饰品到 100 个，覆盖常见武器、手套、刀、箱子、贴纸和胶囊。
