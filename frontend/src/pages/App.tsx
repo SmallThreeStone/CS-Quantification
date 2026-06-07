@@ -15,6 +15,7 @@ import type {
   BacktestResult,
   BacktestSummary,
   CollectRun,
+  DbWriteVolume,
   ItemDetail,
   ManagedItem,
   ManagedItemInput,
@@ -54,6 +55,7 @@ export default function App() {
   const [pushRecords, setPushRecords] = useState<PushRecord[]>([]);
   const [opsHealth, setOpsHealth] = useState<OpsHealth | null>(null);
   const [apiLatency, setApiLatency] = useState<ApiLatency | null>(null);
+  const [dbWriteVolume, setDbWriteVolume] = useState<DbWriteVolume | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   const [runtimeAudit, setRuntimeAudit] = useState<RuntimeAudit | null>(null);
@@ -87,6 +89,7 @@ export default function App() {
         nextPushRecords,
         nextOpsHealth,
         nextApiLatency,
+        nextDbWriteVolume,
         nextOpsReadiness,
         nextRuntimeConfig,
         nextRuntimeAudit,
@@ -112,6 +115,7 @@ export default function App() {
         api.pushRecords(),
         api.opsHealth(),
         api.opsApiLatency(),
+        api.opsDbWriteVolume(),
         api.opsReadiness(),
         api.opsRuntime(),
         api.opsRuntimeAudit(),
@@ -137,6 +141,7 @@ export default function App() {
       setPushRecords(nextPushRecords);
       setOpsHealth(nextOpsHealth);
       setApiLatency(nextApiLatency);
+      setDbWriteVolume(nextDbWriteVolume);
       setOpsReadiness(nextOpsReadiness);
       setRuntimeConfig(nextRuntimeConfig);
       setRuntimeAudit(nextRuntimeAudit);
@@ -278,6 +283,7 @@ export default function App() {
             collectRuns={collectRuns}
             opsHealth={opsHealth}
             apiLatency={apiLatency}
+            dbWriteVolume={dbWriteVolume}
             opsReadiness={opsReadiness}
             runtimeConfig={runtimeConfig}
             runtimeAudit={runtimeAudit}
@@ -1385,6 +1391,7 @@ function SourceView({
   collectRuns,
   opsHealth,
   apiLatency,
+  dbWriteVolume,
   opsReadiness,
   runtimeConfig,
   runtimeAudit,
@@ -1405,6 +1412,7 @@ function SourceView({
   collectRuns: CollectRun[];
   opsHealth: OpsHealth | null;
   apiLatency: ApiLatency | null;
+  dbWriteVolume: DbWriteVolume | null;
   opsReadiness: OpsReadiness | null;
   runtimeConfig: RuntimeConfig | null;
   runtimeAudit: RuntimeAudit | null;
@@ -1445,6 +1453,9 @@ function SourceView({
         <Metric label="API P95" value={apiLatency ? `${apiLatency.p95_latency_ms.toFixed(1)}ms` : "暂无"} tone={apiLatencyTone(apiLatency?.status)} />
         <Metric label="API 请求数" value={apiLatency ? `${apiLatency.request_count}/${apiLatency.window_minutes}分钟` : "暂无"} />
         <Metric label="API 慢/错" value={apiLatency ? `${apiLatency.slow_request_count}/${apiLatency.error_count}` : "暂无"} tone={apiLatencyTone(apiLatency?.status)} />
+        <Metric label="24h 写入" value={dbWriteVolume ? `${dbWriteVolume.total_recent_24h_count} 行` : "暂无"} tone={dbWriteVolume?.status === "active" ? "up" : "neutral"} />
+        <Metric label="数据库总行" value={dbWriteVolume ? `${dbWriteVolume.total_row_count} 行` : "暂无"} />
+        <Metric label="最新写入" value={dbWriteVolume?.latest_write_at ? formatTime(dbWriteVolume.latest_write_at) : "暂无"} tone={dbWriteVolume?.status === "active" ? "up" : "neutral"} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="24h 快照" value={opsHealth ? `${opsHealth.snapshot_count_24h} 条` : "暂无"} />
         <Metric label="24h 告警" value={opsHealth ? `${opsHealth.alert_count_24h} 条` : "暂无"} />
@@ -1459,6 +1470,29 @@ function SourceView({
         <Metric label="快照覆盖率" value={opsReadiness ? formatPercent(opsReadiness.snapshot_coverage_rate) : "暂无"} tone={opsReadiness && opsReadiness.snapshot_coverage_rate >= 0.8 ? "up" : "neutral"} />
         <Metric label="7天复盘" value={opsReadiness?.ready_for_7d_review ? "可复盘" : "观察中"} tone={opsReadiness?.ready_for_7d_review ? "up" : "neutral"} />
         <Metric label="worker" value="本地手动采集 / Docker 常驻" />
+      </div>
+      <div className="push-table">
+        <h3>数据库写入量</h3>
+        {dbWriteVolume ? (
+          <>
+            <div className="push-row">
+              <span>{dbWriteVolume.status}</span>
+              <strong>{dbWriteVolume.total_recent_24h_count} 行 / {dbWriteVolume.window_hours}h</strong>
+              <span>总计 {dbWriteVolume.total_row_count} 行</span>
+              <span>{dbWriteVolume.latest_write_at ? formatTime(dbWriteVolume.latest_write_at) : "暂无写入"}</span>
+            </div>
+            {dbWriteVolume.metrics.map((metric) => (
+              <div className="push-row" key={metric.table}>
+                <span>{metric.name}</span>
+                <strong>{metric.recent_24h_count} 行</strong>
+                <span>总计 {metric.total_count}</span>
+                <span>{metric.latest_at ? formatTime(metric.latest_at) : "暂无"}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无数据库写入量</div>
+        )}
       </div>
       <div className="push-table">
         <h3>MVP 范围摘要</h3>

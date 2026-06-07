@@ -22,6 +22,9 @@ Show-Json "ops-health" $opsHealth
 $apiLatency = Invoke-RestMethod "$BaseUrl/api/ops/api-latency"
 Show-Json "api-latency" $apiLatency
 
+$dbWriteVolume = Invoke-RestMethod "$BaseUrl/api/ops/db-write-volume"
+Show-Json "db-write-volume" $dbWriteVolume
+
 $opsReadiness = Invoke-RestMethod "$BaseUrl/api/ops/readiness"
 Show-Json "ops-readiness" $opsReadiness
 

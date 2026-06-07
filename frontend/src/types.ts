@@ -193,6 +193,24 @@ export type ApiLatency = {
   latest_at: string | null;
 };
 
+export type DbWriteVolumeMetric = {
+  name: string;
+  table: string;
+  total_count: number;
+  recent_24h_count: number;
+  oldest_at: string | null;
+  latest_at: string | null;
+};
+
+export type DbWriteVolume = {
+  status: "active" | "idle";
+  window_hours: number;
+  total_recent_24h_count: number;
+  total_row_count: number;
+  latest_write_at: string | null;
+  metrics: DbWriteVolumeMetric[];
+};
+
 export type OpsReadiness = {
   ready_for_7d_review: boolean;
   observed_days: number;

@@ -23,6 +23,8 @@ from app.schemas.market import (
     CategoryStrategyOut,
     AlertSummaryOut,
     AlertTypeCoverageOut,
+    DbWriteVolumeMetricOut,
+    DbWriteVolumeOut,
     HeatmapBucketOut,
     HealthOut,
     HistoryPointOut,
@@ -70,11 +72,12 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.59"
+APP_VERSION = "0.1.60"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 API_LATENCY_WINDOW_MINUTES = 15
 API_SLOW_REQUEST_MS = 1000
+DB_WRITE_VOLUME_WINDOW_HOURS = 24
 SOURCE_FIELDS = [
     ("lowest_price", "底价"),
     ("sell_count", "在售"),
@@ -542,6 +545,27 @@ def retention(db: Session = Depends(get_db)) -> RetentionOut:
             _retention_metric(db, BacktestResult, BacktestResult.created_at, "回测结果", None, "长期保留，用于策略调参"),
             _retention_metric(db, CollectRunLog, CollectRunLog.started_at, "采集日志", COLLECT_LOG_RETENTION_DAYS, "保留 90 天，用于运维排查"),
         ],
+    )
+
+
+@router.get("/ops/db-write-volume", response_model=DbWriteVolumeOut)
+def ops_db_write_volume(db: Session = Depends(get_db)) -> DbWriteVolumeOut:
+    metrics = [
+        _db_write_metric(db, MarketSnapshot, MarketSnapshot.captured_at, "行情快照", "market_snapshots"),
+        _db_write_metric(db, Alert, Alert.created_at, "告警记录", "alerts"),
+        _db_write_metric(db, PushRecord, PushRecord.created_at, "推送记录", "push_records"),
+        _db_write_metric(db, BacktestResult, BacktestResult.created_at, "回测结果", "backtest_results"),
+        _db_write_metric(db, CollectRunLog, CollectRunLog.started_at, "采集日志", "collect_run_logs"),
+    ]
+    latest_candidates = [metric.latest_at for metric in metrics if metric.latest_at is not None]
+    recent_total = sum(metric.recent_24h_count for metric in metrics)
+    return DbWriteVolumeOut(
+        status="active" if recent_total > 0 else "idle",
+        window_hours=DB_WRITE_VOLUME_WINDOW_HOURS,
+        total_recent_24h_count=recent_total,
+        total_row_count=sum(metric.total_count for metric in metrics),
+        latest_write_at=max(latest_candidates) if latest_candidates else None,
+        metrics=metrics,
     )
 
 
@@ -1232,6 +1256,18 @@ def _retention_metric(db: Session, model, date_column, name: str, retention_days
         row_count=db.query(model).count(),
         oldest_at=db.query(date_column).order_by(date_column.asc()).limit(1).scalar(),
         policy=policy,
+    )
+
+
+def _db_write_metric(db: Session, model, date_column, name: str, table: str) -> DbWriteVolumeMetricOut:
+    cutoff = datetime.utcnow() - timedelta(hours=DB_WRITE_VOLUME_WINDOW_HOURS)
+    return DbWriteVolumeMetricOut(
+        name=name,
+        table=table,
+        total_count=db.query(model).count(),
+        recent_24h_count=db.query(model).filter(date_column >= cutoff).count(),
+        oldest_at=db.query(date_column).order_by(date_column.asc()).limit(1).scalar(),
+        latest_at=db.query(date_column).order_by(date_column.desc()).limit(1).scalar(),
     )
 
 

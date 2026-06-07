@@ -515,6 +515,24 @@ class RetentionMetricOut(BaseModel):
     policy: str
 
 
+class DbWriteVolumeMetricOut(BaseModel):
+    name: str
+    table: str
+    total_count: int
+    recent_24h_count: int
+    oldest_at: datetime | None
+    latest_at: datetime | None
+
+
+class DbWriteVolumeOut(BaseModel):
+    status: str
+    window_hours: int
+    total_recent_24h_count: int
+    total_row_count: int
+    latest_write_at: datetime | None
+    metrics: list[DbWriteVolumeMetricOut]
+
+
 class RetentionOut(BaseModel):
     snapshot_retention_days: int
     collect_log_retention_days: int

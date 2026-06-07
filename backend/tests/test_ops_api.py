@@ -178,7 +178,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.59"
+    assert body["version"] == "0.1.60"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -324,6 +324,71 @@ def test_ops_mvp_scope_marks_core_panels_ready(db_session):
     assert items["item_detail"]["status"] == "ready"
     assert items["alert_center"]["status"] == "ready"
     assert items["push_module"]["status"] == "ready"
+
+
+def test_ops_db_write_volume_reports_idle_empty_state(db_session):
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/db-write-volume")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "idle"
+    assert body["window_hours"] == 24
+    assert body["total_recent_24h_count"] == 0
+    assert body["total_row_count"] == 0
+    assert body["latest_write_at"] is None
+    assert {metric["table"] for metric in body["metrics"]} == {
+        "market_snapshots",
+        "alerts",
+        "push_records",
+        "backtest_results",
+        "collect_run_logs",
+    }
+
+
+def test_ops_db_write_volume_reports_recent_writes(db_session):
+    alert = create_ops_fixture(db_session)
+    db_session.add(
+        PushRecord(
+            alert_id=alert.id,
+            channel="wechat",
+            status="sent",
+            target="wechat",
+            message="ok",
+        )
+    )
+    db_session.add(
+        CollectRunLog(
+            mode="worker",
+            provider="mock",
+            status="success",
+            item_count=1,
+            snapshot_count=1,
+            alert_count=1,
+            started_at=datetime.utcnow() - timedelta(minutes=5),
+        )
+    )
+    db_session.commit()
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/db-write-volume")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    metrics = {metric["table"]: metric for metric in body["metrics"]}
+    assert body["status"] == "active"
+    assert body["total_recent_24h_count"] >= 4
+    assert body["total_row_count"] >= 4
+    assert body["latest_write_at"] is not None
+    assert metrics["market_snapshots"]["recent_24h_count"] == 1
+    assert metrics["alerts"]["recent_24h_count"] == 1
+    assert metrics["push_records"]["recent_24h_count"] == 1
+    assert metrics["collect_run_logs"]["recent_24h_count"] == 1
 
 
 def test_ops_acceptance_reports_review_for_empty_state(db_session):
