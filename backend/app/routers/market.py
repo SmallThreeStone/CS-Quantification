@@ -3,6 +3,7 @@ import os
 import shutil
 from datetime import datetime, timedelta
 from math import ceil
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -20,6 +21,8 @@ from app.schemas.market import (
     BacktestResultOut,
     BacktestSignalOut,
     BacktestSummaryOut,
+    BackupStatusMetricOut,
+    BackupStatusOut,
     CollectRunLogOut,
     DecisionSignalOut,
     CategoryStrategyOut,
@@ -75,12 +78,14 @@ from app.services.score_service import decision_from_scores, score_from_snapshot
 from app.services.steam_nameid_service import SteamNameIdService
 
 router = APIRouter()
-APP_VERSION = "0.1.61"
+APP_VERSION = "0.1.62"
 SNAPSHOT_RETENTION_DAYS = 180
 COLLECT_LOG_RETENTION_DAYS = 90
 API_LATENCY_WINDOW_MINUTES = 15
 API_SLOW_REQUEST_MS = 1000
 DB_WRITE_VOLUME_WINDOW_HOURS = 24
+POSTGRES_BACKUP_RETENTION_DAYS = 14
+CONFIG_BACKUP_RETENTION_DAYS = 30
 SOURCE_FIELDS = [
     ("lowest_price", "底价"),
     ("sell_count", "在售"),
@@ -593,6 +598,34 @@ def ops_host_resources() -> HostResourceOut:
         disk_percent=disk_percent,
         checked_at=datetime.utcnow(),
     )
+
+
+@router.get("/ops/backups", response_model=BackupStatusOut)
+def ops_backups() -> BackupStatusOut:
+    root = _project_root()
+    metrics = [
+        _backup_status_metric(
+            root=root,
+            key="postgres",
+            label="数据库备份",
+            script_path=Path("scripts/backup_postgres.ps1"),
+            backup_dir=Path("backups/postgres"),
+            pattern="*.dump",
+            retention_days=POSTGRES_BACKUP_RETENTION_DAYS,
+        ),
+        _backup_status_metric(
+            root=root,
+            key="config",
+            label="配置备份",
+            script_path=Path("scripts/backup_config.ps1"),
+            backup_dir=Path("backups/config"),
+            pattern="*.zip",
+            retention_days=CONFIG_BACKUP_RETENTION_DAYS,
+        ),
+    ]
+    statuses = {metric.status for metric in metrics}
+    status = "fail" if "fail" in statuses else "warn" if "warn" in statuses else "ready"
+    return BackupStatusOut(status=status, checked_at=datetime.utcnow(), metrics=metrics)
 
 
 @router.post("/retention/cleanup", response_model=RetentionCleanupOut)
@@ -1364,6 +1397,62 @@ def _host_disk() -> tuple[float | None, float | None, float | None]:
     if not total:
         return None, None, None
     return round(total / 1024 / 1024 / 1024, 2), round(used / 1024 / 1024 / 1024, 2), round(used / total * 100, 2)
+
+
+def _project_root() -> Path:
+    cwd = Path.cwd()
+    if (cwd / "scripts").exists() or (cwd / "backups").exists():
+        return cwd
+    parent = cwd.parent
+    if (parent / "scripts").exists() or (parent / "backups").exists():
+        return parent
+    return cwd
+
+
+def _backup_status_metric(
+    root: Path,
+    key: str,
+    label: str,
+    script_path: Path,
+    backup_dir: Path,
+    pattern: str,
+    retention_days: int,
+) -> BackupStatusMetricOut:
+    script = root / script_path
+    directory = root / backup_dir
+    files = sorted((file for file in directory.glob(pattern) if file.is_file()), key=lambda file: file.stat().st_mtime, reverse=True) if directory.exists() else []
+    latest = files[0] if files else None
+    latest_at = datetime.utcfromtimestamp(latest.stat().st_mtime) if latest else None
+    latest_size = latest.stat().st_size if latest else None
+    stale_days = (datetime.utcnow() - latest_at).total_seconds() / 86400 if latest_at else None
+    status = "ready"
+    detail = "最近备份文件非空且未超过保留窗口"
+    if not script.exists():
+        status = "fail"
+        detail = "备份脚本缺失，无法执行上线前备份"
+    elif latest is None:
+        status = "warn"
+        detail = "尚未发现备份文件，请在云服务器部署前执行备份脚本"
+    elif latest_size is not None and latest_size <= 0:
+        status = "warn"
+        detail = "最近备份文件为空，请重新执行备份"
+    elif stale_days is not None and stale_days > retention_days:
+        status = "warn"
+        detail = f"最近备份已超过 {retention_days} 天保留窗口，请补做备份"
+    return BackupStatusMetricOut(
+        key=key,
+        label=label,
+        status=status,
+        script_exists=script.exists(),
+        directory_exists=directory.exists(),
+        file_count=len(files),
+        latest_file=latest.name if latest else None,
+        latest_size_bytes=latest_size,
+        latest_at=latest_at,
+        retention_days=retention_days,
+        stale_days=round(stale_days, 2) if stale_days is not None else None,
+        detail=detail,
+    )
 
 
 def _configured_nameids() -> dict[str, str]:

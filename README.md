@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.61 — 增加主机资源巡检
+V0.1.62 — 增加备份状态巡检
 
 ## 功能范围
 
@@ -46,12 +46,13 @@ V0.1.61 — 增加主机资源巡检
 - API 响应时间：展示近 15 分钟请求数、平均耗时、P95、慢请求和 5xx 错误数量
 - 数据库写入量：展示近 24 小时行情快照、告警、推送、回测和采集日志写入量、总行数和最新写入时间
 - 主机资源巡检：展示 CPU、内存和磁盘占用，辅助云服务器部署后判断资源压力
+- 备份状态巡检：展示数据库备份和配置备份脚本、最近文件、大小、时间和过期状态
 - P0 就绪度：展示观察天数、采集轮次、快照覆盖率和 7 天复盘状态
 - P0 验证摘要：聚合数据源配置、连续采集、字段真实率、告警数量、阻塞项和复盘检查项
 - 数据保留：数据源状态页展示行情快照、告警、回测和采集日志的保留策略、当前数据量和最早记录时间，支持清理过期快照与采集日志
 - 饰品数据可信度：监控列表展示真实字段占比，数据源页列出低可信饰品
 - 数据库迁移：Alembic 基线迁移，后端容器启动前自动执行迁移
-- Docker Compose：frontend、backend、worker、postgres、redis，backend / worker 透传 Steam 订单簿配置
+- Docker Compose：frontend、backend、worker、postgres、redis，backend / worker 透传 Steam 订单簿配置，backend 只读挂载 `scripts/` 与 `backups/` 用于巡检备份状态
 
 ## 环境变量
 
@@ -150,6 +151,7 @@ docker compose up -d --build
 - `GET /api/ops/api-latency`
 - `GET /api/ops/db-write-volume`
 - `GET /api/ops/host-resources`
+- `GET /api/ops/backups`
 - `GET /api/ops/readiness`
 - `GET /api/ops/runtime`
 - `GET /api/ops/runtime-audit`
@@ -203,6 +205,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.62 — 增加备份状态巡检，展示数据库/配置备份脚本、最近备份文件、大小、时间和过期状态。
 - V0.1.61 — 增加主机资源巡检，展示 CPU、内存、磁盘占用并纳入部署验证脚本。
 - V0.1.60 — 增加数据库写入量监控，展示近 24 小时写入量、总行数和最新写入时间。
 - V0.1.59 — 增加 API 响应时间监控，展示近 15 分钟请求数、平均耗时、P95、慢请求和 5xx 错误数量。

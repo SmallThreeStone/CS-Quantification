@@ -41,6 +41,9 @@ services:
       PUSH_CHANNEL: ${PUSH_CHANNEL:-none}
       WECHAT_WEBHOOK_URL: ${WECHAT_WEBHOOK_URL:-}
       QQ_WEBHOOK_URL: ${QQ_WEBHOOK_URL:-}
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./backups:/app/backups:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -28,6 +28,9 @@ Show-Json "db-write-volume" $dbWriteVolume
 $hostResources = Invoke-RestMethod "$BaseUrl/api/ops/host-resources"
 Show-Json "host-resources" $hostResources
 
+$backups = Invoke-RestMethod "$BaseUrl/api/ops/backups"
+Show-Json "backups" $backups
+
 $opsReadiness = Invoke-RestMethod "$BaseUrl/api/ops/readiness"
 Show-Json "ops-readiness" $opsReadiness
 

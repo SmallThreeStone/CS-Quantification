@@ -545,6 +545,27 @@ class HostResourceOut(BaseModel):
     checked_at: datetime
 
 
+class BackupStatusMetricOut(BaseModel):
+    key: str
+    label: str
+    status: str
+    script_exists: bool
+    directory_exists: bool
+    file_count: int
+    latest_file: str | None
+    latest_size_bytes: int | None
+    latest_at: datetime | None
+    retention_days: int
+    stale_days: float | None
+    detail: str
+
+
+class BackupStatusOut(BaseModel):
+    status: str
+    checked_at: datetime
+    metrics: list[BackupStatusMetricOut]
+
+
 class RetentionOut(BaseModel):
     snapshot_retention_days: int
     collect_log_retention_days: int

@@ -14,6 +14,7 @@ import type {
   AlertCoverage,
   BacktestResult,
   BacktestSummary,
+  BackupStatus,
   CollectRun,
   DbWriteVolume,
   HostResource,
@@ -58,6 +59,7 @@ export default function App() {
   const [apiLatency, setApiLatency] = useState<ApiLatency | null>(null);
   const [dbWriteVolume, setDbWriteVolume] = useState<DbWriteVolume | null>(null);
   const [hostResource, setHostResource] = useState<HostResource | null>(null);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [opsReadiness, setOpsReadiness] = useState<OpsReadiness | null>(null);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   const [runtimeAudit, setRuntimeAudit] = useState<RuntimeAudit | null>(null);
@@ -93,6 +95,7 @@ export default function App() {
         nextApiLatency,
         nextDbWriteVolume,
         nextHostResource,
+        nextBackupStatus,
         nextOpsReadiness,
         nextRuntimeConfig,
         nextRuntimeAudit,
@@ -120,6 +123,7 @@ export default function App() {
         api.opsApiLatency(),
         api.opsDbWriteVolume(),
         api.opsHostResources(),
+        api.opsBackups(),
         api.opsReadiness(),
         api.opsRuntime(),
         api.opsRuntimeAudit(),
@@ -147,6 +151,7 @@ export default function App() {
       setApiLatency(nextApiLatency);
       setDbWriteVolume(nextDbWriteVolume);
       setHostResource(nextHostResource);
+      setBackupStatus(nextBackupStatus);
       setOpsReadiness(nextOpsReadiness);
       setRuntimeConfig(nextRuntimeConfig);
       setRuntimeAudit(nextRuntimeAudit);
@@ -290,6 +295,7 @@ export default function App() {
             apiLatency={apiLatency}
             dbWriteVolume={dbWriteVolume}
             hostResource={hostResource}
+            backupStatus={backupStatus}
             opsReadiness={opsReadiness}
             runtimeConfig={runtimeConfig}
             runtimeAudit={runtimeAudit}
@@ -1399,6 +1405,7 @@ function SourceView({
   apiLatency,
   dbWriteVolume,
   hostResource,
+  backupStatus,
   opsReadiness,
   runtimeConfig,
   runtimeAudit,
@@ -1421,6 +1428,7 @@ function SourceView({
   apiLatency: ApiLatency | null;
   dbWriteVolume: DbWriteVolume | null;
   hostResource: HostResource | null;
+  backupStatus: BackupStatus | null;
   opsReadiness: OpsReadiness | null;
   runtimeConfig: RuntimeConfig | null;
   runtimeAudit: RuntimeAudit | null;
@@ -1467,6 +1475,7 @@ function SourceView({
         <Metric label="CPU" value={formatNullablePercent(hostResource?.cpu_percent)} tone={hostResourceTone(hostResource?.status)} />
         <Metric label="内存" value={formatNullablePercent(hostResource?.memory_percent)} tone={hostResourceTone(hostResource?.status)} />
         <Metric label="磁盘" value={formatNullablePercent(hostResource?.disk_percent)} tone={hostResourceTone(hostResource?.status)} />
+        <Metric label="备份状态" value={backupStatus ? backupStatusText(backupStatus.status) : "暂无"} tone={backupStatusTone(backupStatus?.status)} />
         <Metric label="快照状态" value={hasSnapshots ? "已入库" : "待采集"} />
         <Metric label="24h 快照" value={opsHealth ? `${opsHealth.snapshot_count_24h} 条` : "暂无"} />
         <Metric label="24h 告警" value={opsHealth ? `${opsHealth.alert_count_24h} 条` : "暂无"} />
@@ -1529,6 +1538,30 @@ function SourceView({
           </>
         ) : (
           <div className="empty">暂无主机资源数据</div>
+        )}
+      </div>
+      <div className="push-table">
+        <h3>备份状态</h3>
+        {backupStatus ? (
+          <>
+            <div className="push-row">
+              <span>{backupStatus.status}</span>
+              <strong>{formatTime(backupStatus.checked_at)}</strong>
+              <span>{backupStatus.metrics.length} 项巡检</span>
+            </div>
+            {backupStatus.metrics.map((metric) => (
+              <div className="push-row" key={metric.key}>
+                <span>{metric.label}</span>
+                <strong className={backupStatusClass(metric.status)}>{backupStatusText(metric.status)}</strong>
+                <span>{metric.latest_file ?? "暂无文件"}</span>
+                <span>{formatBytes(metric.latest_size_bytes)}</span>
+                <span>{metric.latest_at ? formatTime(metric.latest_at) : "暂无时间"}</span>
+                <span>{metric.detail}</span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div className="empty">暂无备份状态</div>
         )}
       </div>
       <div className="push-table">
@@ -1847,6 +1880,16 @@ function formatNullableGb(value?: number | null) {
   return value == null ? "暂无" : `${value.toFixed(1)} GB`;
 }
 
+function formatBytes(value?: number | null) {
+  if (value == null) {
+    return "暂无";
+  }
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} KB`;
+  }
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function formatChange(value: number) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}`;
 }
@@ -1959,6 +2002,36 @@ function hostResourceTone(status?: string) {
     return "down";
   }
   return "neutral";
+}
+
+function backupStatusText(status: string) {
+  if (status === "ready") {
+    return "正常";
+  }
+  if (status === "fail") {
+    return "阻断";
+  }
+  return "提醒";
+}
+
+function backupStatusTone(status?: string) {
+  if (status === "ready") {
+    return "up";
+  }
+  if (status === "fail") {
+    return "down";
+  }
+  return "neutral";
+}
+
+function backupStatusClass(status: string) {
+  if (status === "ready") {
+    return "up";
+  }
+  if (status === "fail") {
+    return "down";
+  }
+  return "quality-tag partial";
 }
 
 function sourceConfigTone(readiness?: string) {

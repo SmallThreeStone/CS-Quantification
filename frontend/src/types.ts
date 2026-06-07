@@ -223,6 +223,27 @@ export type HostResource = {
   checked_at: string;
 };
 
+export type BackupStatusMetric = {
+  key: string;
+  label: string;
+  status: "ready" | "warn" | "fail";
+  script_exists: boolean;
+  directory_exists: boolean;
+  file_count: number;
+  latest_file: string | null;
+  latest_size_bytes: number | null;
+  latest_at: string | null;
+  retention_days: number;
+  stale_days: number | null;
+  detail: string;
+};
+
+export type BackupStatus = {
+  status: "ready" | "warn" | "fail";
+  checked_at: string;
+  metrics: BackupStatusMetric[];
+};
+
 export type OpsReadiness = {
   ready_for_7d_review: boolean;
   observed_days: number;

@@ -1,7 +1,9 @@
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from fastapi.testclient import TestClient
+import app.routers.market as market_router
 
 from app.config import settings
 from app.database import get_db
@@ -178,7 +180,7 @@ def test_ops_runtime_reports_safe_runtime_config(db_session):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "0.1.61"
+    assert body["version"] == "0.1.62"
     assert body["database_kind"] == "postgresql"
     assert body["market_provider"] == "steam"
     assert body["steam_orderbook_enabled"] is True
@@ -407,6 +409,50 @@ def test_ops_host_resources_reports_current_host_state(db_session):
     assert body["disk_percent"] is None or 0 <= body["disk_percent"] <= 100
     assert body["memory_percent"] is None or 0 <= body["memory_percent"] <= 100
     assert body["cpu_percent"] is None or 0 <= body["cpu_percent"] <= 100
+
+
+def test_ops_backups_warns_without_backup_files(db_session, tmp_path, monkeypatch):
+    create_backup_scripts(tmp_path)
+    monkeypatch.setattr(market_router, "_project_root", lambda: tmp_path)
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/backups")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "warn"
+    assert {metric["key"] for metric in body["metrics"]} == {"postgres", "config"}
+    for metric in body["metrics"]:
+        assert metric["script_exists"] is True
+        assert metric["file_count"] == 0
+        assert metric["latest_file"] is None
+
+
+def test_ops_backups_reports_ready_with_recent_non_empty_files(db_session, tmp_path, monkeypatch):
+    create_backup_scripts(tmp_path)
+    postgres_dir = tmp_path / "backups" / "postgres"
+    config_dir = tmp_path / "backups" / "config"
+    postgres_dir.mkdir(parents=True)
+    config_dir.mkdir(parents=True)
+    (postgres_dir / "cs_quant_20260607_120000.dump").write_bytes(b"postgres")
+    (config_dir / "config_20260607_120000.zip").write_bytes(b"config")
+    monkeypatch.setattr(market_router, "_project_root", lambda: tmp_path)
+    app.dependency_overrides[get_db] = override_session(db_session)
+    client = TestClient(app)
+
+    response = client.get("/api/ops/backups")
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    metrics = {metric["key"]: metric for metric in body["metrics"]}
+    assert metrics["postgres"]["latest_file"].endswith(".dump")
+    assert metrics["postgres"]["latest_size_bytes"] > 0
+    assert metrics["config"]["latest_file"].endswith(".zip")
+    assert metrics["config"]["latest_size_bytes"] > 0
 
 
 def test_ops_acceptance_reports_review_for_empty_state(db_session):
@@ -811,3 +857,10 @@ def create_ops_fixture(db_session) -> Alert:
     db_session.add(alert)
     db_session.flush()
     return alert
+
+
+def create_backup_scripts(root: Path) -> None:
+    scripts = root / "scripts"
+    scripts.mkdir(parents=True)
+    (scripts / "backup_postgres.ps1").write_text("postgres backup", encoding="utf-8")
+    (scripts / "backup_config.ps1").write_text("config backup", encoding="utf-8")
