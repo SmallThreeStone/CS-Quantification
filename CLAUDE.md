@@ -104,16 +104,16 @@ cd frontend && npm run dev
 - **不要为了普通后端代码修改执行 `docker compose down && docker compose up -d --build`**：后端 Python 代码、采集规则、告警规则、小范围运行时代码，优先用 `docker compose restart backend worker` 或对应服务名
 - **必须重建镜像的情况**：`frontend/` 源码或静态构建产物变化、`package.json`/`package-lock.json`、`requirements.txt`、Dockerfile、docker-compose.yml、Node/Python 版本、系统依赖、构建脚本、镜像内路径结构发生变化时，执行 `docker compose up -d --build`
 - **Docker 架构：多服务 Compose**。建议拆分为 frontend、backend、worker、postgres、redis，采集任务和 API 服务分离，便于单独重启和监控
-- **云服务器端口暴露控制**：PostgreSQL、Redis、backend API 只允许绑定 `127.0.0.1`；公网入口优先只暴露 frontend 的 80/443
+- **云服务器端口暴露控制**：PostgreSQL、Redis、backend API 只允许绑定 `127.0.0.1`；公网入口只暴露 frontend 的 `3139`
 - **云服务器端口巡检**：部署验证时执行 `bash scripts/check_firewall.sh`，确认 PostgreSQL、Redis、backend 未监听公网地址
-- **云服务器防火墙配置**：OpenCloud OS 9 可执行 `sudo bash scripts/configure_firewall.sh --ssh-port 22`，仅放行 SSH、HTTP、HTTPS，并移除 PostgreSQL、Redis、backend 端口放行
+- **云服务器防火墙配置**：OpenCloud OS 9 可执行 `sudo bash scripts/configure_firewall.sh --ssh-port 22`，仅放行 SSH 和 frontend `3139`，并移除 PostgreSQL、Redis、backend、HTTP、HTTPS 端口放行
 - **部署前必须先备份数据库和重要配置**：OpenCloud OS 9 云服务器常规线上更新前执行 `bash scripts/backup_postgres.sh` 与 `bash scripts/backup_config.sh`；Windows 本地可使用 `./scripts/backup_postgres.ps1` 与 `./scripts/backup_config.ps1`。确认备份文件非空后再执行 `git pull`、重启或重建
 - **云服务器可安装每日备份 cron**：OpenCloud OS 9 上执行 `sudo bash scripts/install_backup_cron.sh --project-dir /data/cs-market-monitor`，默认 03:10 备份数据库、03:40 备份配置
 - **每日备份 cron 安装后必须可巡检**：确认 `/api/ops/backups` 显示 cron 已安装、数据库和配置备份任务均已配置
 - **容器内热更新前置检查**：先确认服务器 git 工作区干净、当前分支正确、目标 commit 与远端一致；pull 后必须确认实际 HEAD 等于本地已推送 commit
 - **热更新前置巡检脚本**：云服务器执行 `bash scripts/check_update_ready.sh --branch feature/initial-mvp --target-commit <commit>`，通过后再 `git pull --ff-only origin feature/initial-mvp`
 - **热更新后置检查**：重启后必须验证 `docker compose ps`、`/api/health`、公网首页 200、采集任务正常运行、告警推送服务无错误日志
-- **云服务器部署验证优先使用 Linux 脚本**：OpenCloud OS 9 上执行 `bash scripts/verify_deploy.sh --base-url http://localhost`；需要触发一轮采集时追加 `--collect`
+- **云服务器部署验证优先使用 Linux 脚本**：OpenCloud OS 9 上执行 `bash scripts/verify_deploy.sh --base-url http://localhost:3139`；需要触发一轮采集时追加 `--collect`
 - **仅配置/数据变更不必重建镜像**：只改 `.env`、策略配置、数据库、缓存、运行时数据时，用 `docker compose restart` 或 `docker compose up -d`
 - **数据库部署必须保留数据卷**：PostgreSQL / TimescaleDB 数据卷不得随普通部署删除；执行任何可能影响数据卷的命令前必须明确确认
 - **部署后必须观察一轮采集周期**：确认至少一个监控池完成采集，行情快照入库，异常情况下不会批量误推送
@@ -127,7 +127,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.72 — 增加云服务器热更新前置巡检脚本
+V0.1.73 — 调整云服务器前端公网端口为 3139
 
 ## 环境要求
 

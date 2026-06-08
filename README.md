@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.72 — 增加云服务器热更新前置巡检脚本
+V0.1.73 — 调整云服务器前端公网端口为 3139
 
 ## 功能范围
 
@@ -52,7 +52,7 @@ V0.1.72 — 增加云服务器热更新前置巡检脚本
 - 首次部署引导：支持 OpenCloud OS 9 安装 Docker Compose、firewalld、cron、git、curl、zip 等基础依赖
 - 生产环境变量巡检：Linux 部署验证会检查 `.env` 是否仍使用默认密码、Mock 数据源、本机 CORS 或空推送配置
 - 热更新前置巡检：支持在云服务器 `git pull` 前检查工作区、分支、远端 HEAD、目标 commit 和快进关系
-- 端口暴露控制：Docker Compose 中 PostgreSQL、Redis 和 backend 仅绑定本机地址，公网只暴露前端入口
+- 端口暴露控制：Docker Compose 中 PostgreSQL、Redis 和 backend 仅绑定本机地址，公网只暴露前端 `3139`
 - 端口监听巡检：Linux 部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址
 - 防火墙配置：支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口
 - P0 就绪度：展示观察天数、采集轮次、快照覆盖率和 7 天复盘状态
@@ -74,7 +74,7 @@ WORKER_SLEEP_SECONDS=60
 PUSH_CHANNEL=none
 ```
 
-云服务器生产部署优先复制 `.env.production.example` 为 `.env`，并至少替换强密码、公网 CORS 来源和微信/QQ Webhook。生产环境建议使用 `MARKET_PROVIDER=steam`，不要提交真实 `.env`。
+云服务器生产部署优先复制 `.env.production.example` 为 `.env`，并至少替换强密码、公网 CORS 来源和微信/QQ Webhook。当前云服务器前端入口为 `http://82.156.48.198:3139`，生产环境建议使用 `MARKET_PROVIDER=steam`，不要提交真实 `.env`。
 
 OpenCloud OS 9 部署前可单独检查生产环境变量：
 
@@ -132,7 +132,7 @@ Docker 部署时后端容器会自动执行迁移；`requirements.txt`、`Docker
 docker compose up -d --build
 ```
 
-访问：`http://localhost`
+访问：`http://localhost:3139`
 
 ### 首次初始化云服务器
 
@@ -156,15 +156,15 @@ bash scripts/check_update_ready.sh --branch feature/initial-mvp --target-commit 
 脚本通过后再执行 `git pull --ff-only origin feature/initial-mvp`，随后按变更范围选择 `docker compose restart backend worker` 或 `docker compose up -d --build`。
 
 ```powershell
-.\scripts\verify_deploy.ps1 -BaseUrl http://localhost
-.\scripts\verify_deploy.ps1 -BaseUrl http://localhost -Collect
+.\scripts\verify_deploy.ps1 -BaseUrl http://localhost:3139
+.\scripts\verify_deploy.ps1 -BaseUrl http://localhost:3139 -Collect
 ```
 
 OpenCloud OS 9 / Linux 云服务器优先使用：
 
 ```bash
-bash scripts/verify_deploy.sh --base-url http://localhost
-bash scripts/verify_deploy.sh --base-url http://localhost --collect
+bash scripts/verify_deploy.sh --base-url http://localhost:3139
+bash scripts/verify_deploy.sh --base-url http://localhost:3139 --collect
 ```
 
 验证脚本需要服务器已安装 Docker Compose，并且项目服务已经启动。
@@ -175,7 +175,7 @@ bash scripts/check_env.sh
 bash scripts/check_firewall.sh
 ```
 
-OpenCloud OS 9 可配置 firewalld 规则：
+OpenCloud OS 9 可配置 firewalld 规则，只放行 SSH 和前端 `3139`：
 
 ```bash
 sudo bash scripts/configure_firewall.sh --ssh-port 22
@@ -286,6 +286,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.73 — 调整云服务器前端公网端口为 3139，Compose、firewalld 配置和端口巡检同步收口到该入口。
 - V0.1.72 — 增加云服务器热更新前置巡检脚本，`git pull` 前检查工作区、分支、远端 HEAD、目标 commit 和快进关系。
 - V0.1.71 — 增加生产环境变量巡检脚本，部署验证前检查强密码、Steam 数据源、订单簿、CORS、worker 间隔和微信/QQ 推送配置。
 - V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本和生产环境变量模板，辅助云服务器安装 Docker Compose、firewalld、cron 与基础工具。

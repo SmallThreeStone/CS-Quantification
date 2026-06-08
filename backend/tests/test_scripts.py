@@ -85,8 +85,7 @@ def test_check_firewall_shell_script_guards_internal_ports():
     assert "check_loopback_only 5432 PostgreSQL" in script
     assert "check_loopback_only 6379 Redis" in script
     assert "check_loopback_only 8000 Backend" in script
-    assert "check_public_entry 80 Frontend" in script
-    assert "check_public_entry 443 HTTPS" in script
+    assert "check_public_entry 3139 Frontend" in script
     assert "exposed beyond loopback" in script
 
 
@@ -128,10 +127,11 @@ def test_configure_firewall_shell_script_allows_only_public_entrypoints():
     assert "firewall-cmd" in script
     assert "systemctl enable --now firewalld" in script
     assert '--add-port="${SSH_PORT}/tcp"' in script
-    assert "--add-service=http" in script
-    assert "--add-service=https" in script
-    assert "for port in 5432 6379 8000" in script
+    assert "--add-port=3139/tcp" in script
+    assert "for port in 80 443 5432 6379 8000" in script
     assert '--remove-port="${port}/tcp"' in script
+    assert "--remove-service=http" in script
+    assert "--remove-service=https" in script
     assert "bash scripts/check_firewall.sh" in script
 
 

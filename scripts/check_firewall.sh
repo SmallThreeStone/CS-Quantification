@@ -40,8 +40,7 @@ check_public_entry() {
 check_loopback_only 5432 PostgreSQL
 check_loopback_only 6379 Redis
 check_loopback_only 8000 Backend
-check_public_entry 80 Frontend
-check_public_entry 443 HTTPS
+check_public_entry 3139 Frontend
 
 if [ "$FAILED" = true ]; then
   exit 1

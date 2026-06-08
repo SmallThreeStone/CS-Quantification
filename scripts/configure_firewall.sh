@@ -34,18 +34,19 @@ fi
 systemctl enable --now firewalld
 
 firewall-cmd --zone="$ZONE" --permanent --add-port="${SSH_PORT}/tcp"
-firewall-cmd --zone="$ZONE" --permanent --add-service=http
-firewall-cmd --zone="$ZONE" --permanent --add-service=https
+firewall-cmd --zone="$ZONE" --permanent --add-port=3139/tcp
 
-for port in 5432 6379 8000; do
+for port in 80 443 5432 6379 8000; do
   firewall-cmd --zone="$ZONE" --permanent --remove-port="${port}/tcp" >/dev/null 2>&1 || true
 done
+firewall-cmd --zone="$ZONE" --permanent --remove-service=http >/dev/null 2>&1 || true
+firewall-cmd --zone="$ZONE" --permanent --remove-service=https >/dev/null 2>&1 || true
 
 firewall-cmd --reload
 
 echo "== firewalld configured =="
 echo "zone=${ZONE}"
 echo "ssh=${SSH_PORT}/tcp"
-echo "public=http,https"
-echo "blocked=5432,6379,8000"
+echo "public=3139/tcp"
+echo "blocked=80,443,5432,6379,8000"
 echo "next=bash scripts/check_firewall.sh"

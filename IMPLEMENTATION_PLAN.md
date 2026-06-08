@@ -255,8 +255,8 @@
    16. 实施进度：部署验证脚本已读取 `/api/ops/backups`，用于确认数据库和配置备份脚本、最近备份文件和过期状态。
    16.1. 实施进度：`/api/ops/backups` 已纳入每日备份 cron 安装状态、任务覆盖和最近备份日志时间。
    17. 实施进度：已增加 `scripts/verify_deploy.sh`，支持 OpenCloud OS 9 / Linux 云服务器通过 bash 巡检 Docker Compose、核心 API、前端首页和可选采集。
-   18. 实施进度：已增加 `scripts/check_firewall.sh`，部署验证时检查 PostgreSQL、Redis、backend 是否仅监听本机地址。
-   19. 实施进度：已增加 `scripts/configure_firewall.sh`，支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口放行。
+   18. 实施进度：已增加 `scripts/check_firewall.sh`，部署验证时检查 PostgreSQL、Redis、backend 是否仅监听本机地址，并检查 frontend `3139` 是否监听。
+   19. 实施进度：已增加 `scripts/configure_firewall.sh`，支持 OpenCloud OS 9 通过 firewalld 放行 SSH/frontend `3139` 并移除内部服务端口、HTTP、HTTPS 放行。
    20. 实施进度：Linux 部署验证脚本已接入 `scripts/check_env.sh`，先检查生产环境变量再继续巡检防火墙和 API。
    21. 实施进度：已增加 `scripts/check_update_ready.sh`，云服务器 `git pull` 前可检查工作区干净、分支正确、远端 HEAD 与目标 commit 一致且本地可快进。
 9. 部署前备份数据库。
@@ -312,9 +312,9 @@
 5. 后台登录鉴权。
 6. API 访问鉴权。
 7. 管理接口限制 IP 或增加访问控制。
-   1. 实施进度：已收紧 Docker Compose 端口暴露，PostgreSQL、Redis 和 backend API 仅绑定 `127.0.0.1`，公网优先只暴露 frontend 入口；MVP 登录鉴权仍按前置确认暂不实现。
+   1. 实施进度：已收紧 Docker Compose 端口暴露，PostgreSQL、Redis 和 backend API 仅绑定 `127.0.0.1`，公网只暴露 frontend `3139` 入口；MVP 登录鉴权仍按前置确认暂不实现。
    2. 实施进度：已增加 Linux 端口监听巡检脚本，辅助确认内部服务未对公网开放。
-   3. 实施进度：已增加 Linux firewalld 配置脚本，辅助云服务器仅放行 SSH、HTTP、HTTPS。
+   3. 实施进度：已增加 Linux firewalld 配置脚本，辅助云服务器仅放行 SSH 和 frontend `3139`。
 8. Token、API Key、数据库密码全部使用环境变量。
 
 ## 八、阶段里程碑
