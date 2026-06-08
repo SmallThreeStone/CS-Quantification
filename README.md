@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.75 — 修正生产 PostgreSQL 连接驱动
+V0.1.76 — 增加 Steam 采集超时与 P0 限额
 
 ## 功能范围
 
@@ -54,6 +54,7 @@ V0.1.75 — 修正生产 PostgreSQL 连接驱动
 - 热更新前置巡检：支持在云服务器 `git pull` 前检查工作区、分支、远端 HEAD、目标 commit 和快进关系
 - Docker 构建镜像源：支持通过 `.env` 配置 `PIP_INDEX_URL`、`PIP_DEFAULT_TIMEOUT` 和 `NPM_REGISTRY`，缓解云服务器构建依赖下载超时
 - PostgreSQL 生产连接：Docker Compose 使用 `postgresql+psycopg://`，匹配后端依赖里的 psycopg v3 驱动
+- Steam 采集收敛：支持 `STEAM_REQUEST_TIMEOUT_SECONDS` 和 `COLLECT_ITEM_LIMIT`，云服务器 P0 阶段先限制采集 30 个饰品并避免重叠采集
 - 端口暴露控制：Docker Compose 中 PostgreSQL、Redis 和 backend 仅绑定本机地址，公网只暴露前端 `3139`
 - 端口监听巡检：Linux 部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址
 - 防火墙配置：支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口
@@ -289,6 +290,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.76 — 增加 Steam 请求超时、P0 采集数量限额和重叠采集保护，避免云服务器首轮真实采集长时间卡住。
 - V0.1.75 — 修正生产 PostgreSQL 连接驱动，Compose 和生产模板使用 `postgresql+psycopg://` 匹配 psycopg v3。
 - V0.1.74 — 增加云服务器 Docker 构建镜像源配置，支持 pip/npm 镜像和 pip 超时参数以缓解依赖下载超时。
 - V0.1.73 — 调整云服务器前端公网端口为 3139，Compose、firewalld 配置和端口巡检同步收口到该入口。

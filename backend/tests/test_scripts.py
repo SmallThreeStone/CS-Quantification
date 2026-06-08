@@ -23,6 +23,8 @@ def test_compose_passes_build_mirror_args():
     assert "PIP_INDEX_URL" in compose
     assert "PIP_DEFAULT_TIMEOUT" in compose
     assert "NPM_REGISTRY" in compose
+    assert "STEAM_REQUEST_TIMEOUT_SECONDS" in compose
+    assert "COLLECT_ITEM_LIMIT" in compose
 
 
 def test_dockerfiles_support_build_mirrors():
@@ -178,6 +180,8 @@ def test_production_env_template_defaults_to_steam_and_no_secret():
     assert "DATABASE_URL=postgresql+psycopg://" in env_template
     assert "MARKET_PROVIDER=steam" in env_template
     assert "STEAM_ORDERBOOK_ENABLED=true" in env_template
+    assert "STEAM_REQUEST_TIMEOUT_SECONDS=5" in env_template
+    assert "COLLECT_ITEM_LIMIT=30" in env_template
     assert "PUSH_CHANNEL=wechat" in env_template
     assert "WECHAT_WEBHOOK_URL=" in env_template
     assert "QQ_WEBHOOK_URL=" in env_template

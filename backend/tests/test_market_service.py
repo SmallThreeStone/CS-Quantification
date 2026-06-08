@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from app.models import Item, MonitorPool, Platform, StrategyConfig
+from app.models import CollectRunLog, Item, MonitorPool, Platform, StrategyConfig
 from app.services.market_provider import Quote, SteamMarketProvider
 from app.services.market_service import MarketService
 
@@ -107,6 +107,46 @@ def test_collect_run_high_fallback_ratio_suppresses_push(db_session):
     assert "fallback 覆盖" in service.push_suppress_reason()
 
 
+def test_collect_item_limit_caps_items(db_session):
+    from app.config import settings
+
+    previous_limit = settings.collect_item_limit
+    settings.collect_item_limit = 2
+    platform = Platform(code="steam", name="Steam")
+    pool = MonitorPool(name="limit-pool", interval_minutes=10)
+    db_session.add_all([platform, pool, StrategyConfig(name="default")])
+    db_session.flush()
+    for index in range(5):
+        db_session.add(Item(market_hash_name=f"limit-{index}", display_name=f"限额{index}", pool_id=pool.id, is_active=True))
+    db_session.commit()
+    try:
+        service = MarketService(db_session)
+        service.collect_due_pools()
+    finally:
+        settings.collect_item_limit = previous_limit
+
+    assert service.last_run_log is not None
+    assert service.last_run_log.item_count == 2
+    assert service.last_run_log.snapshot_count == 2
+
+
+def test_collect_skips_when_running_log_exists(db_session):
+    platform = Platform(code="steam", name="Steam")
+    pool = MonitorPool(name="running-pool", interval_minutes=10)
+    running = CollectRunLog(mode="worker", provider="steam", status="running", item_count=1, started_at=datetime.utcnow())
+    db_session.add_all([platform, pool, StrategyConfig(name="default"), running])
+    db_session.flush()
+    db_session.add(Item(market_hash_name="running-skip", display_name="跳过", pool_id=pool.id, is_active=True))
+    db_session.commit()
+
+    service = MarketService(db_session)
+    alerts = service.collect_due_pools()
+
+    assert alerts == []
+    assert service.last_run_log is running
+    assert len(pool.items[0].snapshots) == 0
+
+
 def test_steam_provider_marks_partial_real_fields(monkeypatch):
     class Response:
         def raise_for_status(self):
@@ -123,6 +163,33 @@ def test_steam_provider_marks_partial_real_fields(monkeypatch):
     assert quality["is_fallback"] is False
     assert {"lowest_price", "volume_24h", "avg_price_24h"} <= set(quality["real_fields"])
     assert {"sell_count", "highest_buy_price", "buy_count"} <= set(quality["fallback_fields"])
+
+
+def test_steam_provider_uses_configured_timeout(monkeypatch):
+    from app.config import settings
+
+    previous_timeout = settings.steam_request_timeout_seconds
+    settings.steam_request_timeout_seconds = 3.5
+    calls = []
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"success": False}
+
+    def fake_get(*args, **kwargs):
+        calls.append(kwargs)
+        return Response()
+
+    monkeypatch.setattr("app.services.market_provider.httpx.get", fake_get)
+    try:
+        SteamMarketProvider().fetch_quote("AK-47 | Test")
+    finally:
+        settings.steam_request_timeout_seconds = previous_timeout
+
+    assert calls[0]["timeout"] == 3.5
 
 
 def test_steam_provider_uses_orderbook_when_item_nameid_is_configured(monkeypatch):

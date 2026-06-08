@@ -105,6 +105,7 @@ cd frontend && npm run dev
 - **必须重建镜像的情况**：`frontend/` 源码或静态构建产物变化、`package.json`/`package-lock.json`、`requirements.txt`、Dockerfile、docker-compose.yml、Node/Python 版本、系统依赖、构建脚本、镜像内路径结构发生变化时，执行 `docker compose up -d --build`
 - **云服务器构建镜像源**：OpenCloud OS 9 网络较慢时 `.env` 可配置 `PIP_INDEX_URL`、`PIP_DEFAULT_TIMEOUT` 和 `NPM_REGISTRY`，但仍必须通过 Docker Compose 构建
 - **生产 PostgreSQL 驱动**：Docker Compose / `.env` 使用 `postgresql+psycopg://`，匹配项目依赖的 psycopg v3；不要改回需要 `psycopg2` 的 `postgresql://`
+- **P0 真实采集收敛**：云服务器初期可用 `COLLECT_ITEM_LIMIT=30` 和 `STEAM_REQUEST_TIMEOUT_SECONDS=5` 限制首轮采集耗时，待 Steam NameID 和数据源稳定后再放大
 - **Docker 架构：多服务 Compose**。建议拆分为 frontend、backend、worker、postgres、redis，采集任务和 API 服务分离，便于单独重启和监控
 - **云服务器端口暴露控制**：PostgreSQL、Redis、backend API 只允许绑定 `127.0.0.1`；公网入口只暴露 frontend 的 `3139`
 - **云服务器端口巡检**：部署验证时执行 `bash scripts/check_firewall.sh`，确认 PostgreSQL、Redis、backend 未监听公网地址
@@ -129,7 +130,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.75 — 修正生产 PostgreSQL 连接驱动
+V0.1.76 — 增加 Steam 采集超时与 P0 限额
 
 ## 环境要求
 

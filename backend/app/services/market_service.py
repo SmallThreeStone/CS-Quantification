@@ -45,6 +45,12 @@ class MarketService:
         return ""
 
     def _collect_items(self, items: list[Item], mode: str) -> list[Alert]:
+        running = self.db.query(CollectRunLog).filter_by(status="running").first()
+        if running is not None:
+            self.last_run_log = running
+            return []
+        if settings.collect_item_limit > 0:
+            items = items[: settings.collect_item_limit]
         started = datetime.utcnow()
         log = CollectRunLog(mode=mode, provider=settings.market_provider, item_count=len(items), started_at=started)
         self.db.add(log)

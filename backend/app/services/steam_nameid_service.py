@@ -3,13 +3,15 @@ from urllib.parse import quote
 
 import httpx
 
+from app.config import settings
+
 
 class SteamNameIdService:
     def discover(self, market_hash_name: str) -> str:
         response = httpx.get(
             f"https://steamcommunity.com/market/listings/730/{quote(market_hash_name)}",
             headers={"User-Agent": "Mozilla/5.0"},
-            timeout=10,
+            timeout=settings.steam_request_timeout_seconds,
         )
         response.raise_for_status()
         return self.parse(response.text)
@@ -38,7 +40,7 @@ class SteamNameIdService:
                 "currency": 23,
                 "item_nameid": steam_item_nameid,
             },
-            timeout=8,
+            timeout=settings.steam_request_timeout_seconds,
         )
         response.raise_for_status()
         return response.json()

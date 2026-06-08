@@ -154,7 +154,7 @@ class SteamMarketProvider:
         response = httpx.get(
             "https://steamcommunity.com/market/priceoverview/",
             params={"appid": 730, "currency": 23, "market_hash_name": market_hash_name},
-            timeout=8,
+            timeout=settings.steam_request_timeout_seconds,
         )
         response.raise_for_status()
         return response.json()
