@@ -232,6 +232,7 @@
    5. 实施进度：Docker Compose / Dockerfile 已支持 `PIP_INDEX_URL`、`PIP_DEFAULT_TIMEOUT` 和 `NPM_REGISTRY` 构建参数，降低云服务器依赖下载超时风险。
 3. 部署数据库与 Redis。
    1. 实施进度：已增加数据库迁移启动器，支持全新数据库初始化和早期 MVP 表结构纳入迁移版本管理。
+   2. 实施进度：生产 PostgreSQL 连接串已使用 `postgresql+psycopg://`，匹配后端 psycopg v3 驱动并避免容器启动时误找 `psycopg2`。
 4. 部署后端 API。
 5. 部署采集与告警 worker。
    1. 实施进度：worker 已支持 `WORKER_SLEEP_SECONDS` 配置后台轮询间隔，便于云服务器按监控池频率调整调度。

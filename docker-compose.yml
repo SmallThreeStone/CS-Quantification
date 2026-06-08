@@ -35,7 +35,7 @@ services:
         PIP_DEFAULT_TIMEOUT: ${PIP_DEFAULT_TIMEOUT:-120}
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:5173}
       MARKET_PROVIDER: ${MARKET_PROVIDER:-mock}
       STEAM_ORDERBOOK_ENABLED: ${STEAM_ORDERBOOK_ENABLED:-false}
@@ -69,7 +69,7 @@ services:
     command: ["python", "-m", "app.jobs.worker"]
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cs_quant}:${POSTGRES_PASSWORD:-cs_quant_password}@postgres:5432/${POSTGRES_DB:-cs_quant}
       MARKET_PROVIDER: ${MARKET_PROVIDER:-mock}
       STEAM_ORDERBOOK_ENABLED: ${STEAM_ORDERBOOK_ENABLED:-false}
       STEAM_ORDERBOOK_ITEM_NAMEIDS: ${STEAM_ORDERBOOK_ITEM_NAMEIDS:-{}}

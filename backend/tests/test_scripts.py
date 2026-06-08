@@ -11,6 +11,7 @@ def test_compose_binds_internal_services_to_loopback_only():
     assert "127.0.0.1:6379:6379" in compose
     assert "127.0.0.1:8000:8000" in compose
     assert "3139:80" in compose
+    assert "postgresql+psycopg://" in compose
     assert '"5432:5432"' not in compose
     assert '"6379:6379"' not in compose
     assert '"8000:8000"' not in compose
@@ -174,6 +175,7 @@ def test_production_env_template_defaults_to_steam_and_no_secret():
     env_template = (ROOT / ".env.production.example").read_text(encoding="utf-8")
 
     assert "POSTGRES_PASSWORD=replace_with_strong_password" in env_template
+    assert "DATABASE_URL=postgresql+psycopg://" in env_template
     assert "MARKET_PROVIDER=steam" in env_template
     assert "STEAM_ORDERBOOK_ENABLED=true" in env_template
     assert "PUSH_CHANNEL=wechat" in env_template
