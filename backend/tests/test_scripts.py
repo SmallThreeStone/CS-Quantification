@@ -106,6 +106,21 @@ def test_check_env_shell_script_guards_cloud_env_values():
     assert "PUSH_CHANNEL should be wechat or qq for cloud deployment" in script
 
 
+def test_check_update_ready_shell_script_guards_git_update_state():
+    script = (ROOT / "scripts" / "check_update_ready.sh").read_text(encoding="utf-8")
+
+    assert 'REMOTE="origin"' in script
+    assert 'BRANCH="feature/initial-mvp"' in script
+    assert "--target-commit" in script
+    assert "git rev-parse --is-inside-work-tree" in script
+    assert "git status --porcelain" in script
+    assert 'git fetch "$REMOTE" "$BRANCH"' in script
+    assert "git rev-parse FETCH_HEAD" in script
+    assert "does not match target commit" in script
+    assert "git merge-base --is-ancestor" in script
+    assert "git pull --ff-only" in script
+
+
 def test_configure_firewall_shell_script_allows_only_public_entrypoints():
     script = (ROOT / "scripts" / "configure_firewall.sh").read_text(encoding="utf-8")
 

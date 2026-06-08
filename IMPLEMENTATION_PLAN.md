@@ -258,6 +258,7 @@
    18. 实施进度：已增加 `scripts/check_firewall.sh`，部署验证时检查 PostgreSQL、Redis、backend 是否仅监听本机地址。
    19. 实施进度：已增加 `scripts/configure_firewall.sh`，支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口放行。
    20. 实施进度：Linux 部署验证脚本已接入 `scripts/check_env.sh`，先检查生产环境变量再继续巡检防火墙和 API。
+   21. 实施进度：已增加 `scripts/check_update_ready.sh`，云服务器 `git pull` 前可检查工作区干净、分支正确、远端 HEAD 与目标 commit 一致且本地可快进。
 9. 部署前备份数据库。
    1. 实施进度：已增加 `scripts/backup_postgres.ps1`，支持 Docker Compose PostgreSQL 生成 `.dump` 备份并清理过期备份。
    2. 实施进度：已增加 `scripts/backup_postgres.sh`，支持 OpenCloud OS 9 / Linux 云服务器通过 bash 执行 PostgreSQL 备份。

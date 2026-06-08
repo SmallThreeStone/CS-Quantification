@@ -111,6 +111,7 @@ cd frontend && npm run dev
 - **云服务器可安装每日备份 cron**：OpenCloud OS 9 上执行 `sudo bash scripts/install_backup_cron.sh --project-dir /data/cs-market-monitor`，默认 03:10 备份数据库、03:40 备份配置
 - **每日备份 cron 安装后必须可巡检**：确认 `/api/ops/backups` 显示 cron 已安装、数据库和配置备份任务均已配置
 - **容器内热更新前置检查**：先确认服务器 git 工作区干净、当前分支正确、目标 commit 与远端一致；pull 后必须确认实际 HEAD 等于本地已推送 commit
+- **热更新前置巡检脚本**：云服务器执行 `bash scripts/check_update_ready.sh --branch feature/initial-mvp --target-commit <commit>`，通过后再 `git pull --ff-only origin feature/initial-mvp`
 - **热更新后置检查**：重启后必须验证 `docker compose ps`、`/api/health`、公网首页 200、采集任务正常运行、告警推送服务无错误日志
 - **云服务器部署验证优先使用 Linux 脚本**：OpenCloud OS 9 上执行 `bash scripts/verify_deploy.sh --base-url http://localhost`；需要触发一轮采集时追加 `--collect`
 - **仅配置/数据变更不必重建镜像**：只改 `.env`、策略配置、数据库、缓存、运行时数据时，用 `docker compose restart` 或 `docker compose up -d`
@@ -126,7 +127,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.71 — 增加生产环境变量巡检脚本
+V0.1.72 — 增加云服务器热更新前置巡检脚本
 
 ## 环境要求
 
@@ -137,5 +138,6 @@ V0.1.71 — 增加生产环境变量巡检脚本
 - Docker + Docker Compose（云服务器部署必须使用）
 - OpenCloud OS 9 首次部署可用 `scripts/bootstrap_opencloud.sh` 安装 Docker Compose、firewalld、crond、git、curl、zip 和 iproute
 - OpenCloud OS 9 生产环境变量巡检可用 `scripts/check_env.sh`
+- 云服务器热更新前置巡检可用 `scripts/check_update_ready.sh`
 - 至少一个可用的 CS2 市场数据源 API Key 或合规数据采集入口
 - Telegram Bot Token / 企业微信 Bot Webhook / 邮件 SMTP（三选一，用于异动推送）

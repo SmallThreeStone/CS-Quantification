@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.71 — 增加生产环境变量巡检脚本
+V0.1.72 — 增加云服务器热更新前置巡检脚本
 
 ## 功能范围
 
@@ -51,6 +51,7 @@ V0.1.71 — 增加生产环境变量巡检脚本
 - 部署验证：支持 Linux `verify_deploy.sh` 和 Windows PowerShell `verify_deploy.ps1` 巡检核心 API、前端首页和可选采集
 - 首次部署引导：支持 OpenCloud OS 9 安装 Docker Compose、firewalld、cron、git、curl、zip 等基础依赖
 - 生产环境变量巡检：Linux 部署验证会检查 `.env` 是否仍使用默认密码、Mock 数据源、本机 CORS 或空推送配置
+- 热更新前置巡检：支持在云服务器 `git pull` 前检查工作区、分支、远端 HEAD、目标 commit 和快进关系
 - 端口暴露控制：Docker Compose 中 PostgreSQL、Redis 和 backend 仅绑定本机地址，公网只暴露前端入口
 - 端口监听巡检：Linux 部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址
 - 防火墙配置：支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口
@@ -144,6 +145,15 @@ sudo bash scripts/bootstrap_opencloud.sh --project-dir /data/cs-market-monitor
 脚本会安装并启用 Docker Compose、firewalld、crond、git、curl、zip、iproute 等部署必需工具，并创建项目目录。安装完成后通过 git 拉取代码，复制 `.env.production.example` 为 `.env`，再继续配置防火墙和启动服务。
 
 ### 部署验证
+
+云服务器准备更新前先确认 git 状态：
+
+```bash
+bash scripts/check_update_ready.sh --branch feature/initial-mvp
+bash scripts/check_update_ready.sh --branch feature/initial-mvp --target-commit <本地已提交的commit>
+```
+
+脚本通过后再执行 `git pull --ff-only origin feature/initial-mvp`，随后按变更范围选择 `docker compose restart backend worker` 或 `docker compose up -d --build`。
 
 ```powershell
 .\scripts\verify_deploy.ps1 -BaseUrl http://localhost
@@ -276,6 +286,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.72 — 增加云服务器热更新前置巡检脚本，`git pull` 前检查工作区、分支、远端 HEAD、目标 commit 和快进关系。
 - V0.1.71 — 增加生产环境变量巡检脚本，部署验证前检查强密码、Steam 数据源、订单簿、CORS、worker 间隔和微信/QQ 推送配置。
 - V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本和生产环境变量模板，辅助云服务器安装 Docker Compose、firewalld、cron 与基础工具。
 - V0.1.69 — 增加 Linux 防火墙配置脚本，支持 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口。
