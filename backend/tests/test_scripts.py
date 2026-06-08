@@ -10,9 +10,30 @@ def test_compose_binds_internal_services_to_loopback_only():
     assert "127.0.0.1:5432:5432" in compose
     assert "127.0.0.1:6379:6379" in compose
     assert "127.0.0.1:8000:8000" in compose
+    assert "3139:80" in compose
     assert '"5432:5432"' not in compose
     assert '"6379:6379"' not in compose
     assert '"8000:8000"' not in compose
+
+
+def test_compose_passes_build_mirror_args():
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+
+    assert "PIP_INDEX_URL" in compose
+    assert "PIP_DEFAULT_TIMEOUT" in compose
+    assert "NPM_REGISTRY" in compose
+
+
+def test_dockerfiles_support_build_mirrors():
+    backend = (ROOT / "backend" / "Dockerfile").read_text(encoding="utf-8")
+    frontend = (ROOT / "frontend" / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "ARG PIP_INDEX_URL" in backend
+    assert "ARG PIP_DEFAULT_TIMEOUT" in backend
+    assert "ENV PIP_INDEX_URL" in backend
+    assert "ENV PIP_DEFAULT_TIMEOUT" in backend
+    assert "ARG NPM_REGISTRY" in frontend
+    assert 'npm config set registry "$NPM_REGISTRY"' in frontend
 
 
 def test_backup_postgres_script_uses_compose_dump_and_retention():
@@ -158,6 +179,9 @@ def test_production_env_template_defaults_to_steam_and_no_secret():
     assert "PUSH_CHANNEL=wechat" in env_template
     assert "WECHAT_WEBHOOK_URL=" in env_template
     assert "QQ_WEBHOOK_URL=" in env_template
+    assert "PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple" in env_template
+    assert "PIP_DEFAULT_TIMEOUT=300" in env_template
+    assert "NPM_REGISTRY=https://registry.npmmirror.com/" in env_template
     assert "cs_quant_password" not in env_template
 
 

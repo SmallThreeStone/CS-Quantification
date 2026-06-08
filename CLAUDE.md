@@ -103,6 +103,7 @@ cd frontend && npm run dev
 - **常规代码更新优先最小化重启，不默认重建镜像**：本地 commit + push → SSH 到服务器 → `git pull` 最新代码 → 仅重启受影响服务
 - **不要为了普通后端代码修改执行 `docker compose down && docker compose up -d --build`**：后端 Python 代码、采集规则、告警规则、小范围运行时代码，优先用 `docker compose restart backend worker` 或对应服务名
 - **必须重建镜像的情况**：`frontend/` 源码或静态构建产物变化、`package.json`/`package-lock.json`、`requirements.txt`、Dockerfile、docker-compose.yml、Node/Python 版本、系统依赖、构建脚本、镜像内路径结构发生变化时，执行 `docker compose up -d --build`
+- **云服务器构建镜像源**：OpenCloud OS 9 网络较慢时 `.env` 可配置 `PIP_INDEX_URL`、`PIP_DEFAULT_TIMEOUT` 和 `NPM_REGISTRY`，但仍必须通过 Docker Compose 构建
 - **Docker 架构：多服务 Compose**。建议拆分为 frontend、backend、worker、postgres、redis，采集任务和 API 服务分离，便于单独重启和监控
 - **云服务器端口暴露控制**：PostgreSQL、Redis、backend API 只允许绑定 `127.0.0.1`；公网入口只暴露 frontend 的 `3139`
 - **云服务器端口巡检**：部署验证时执行 `bash scripts/check_firewall.sh`，确认 PostgreSQL、Redis、backend 未监听公网地址
@@ -127,7 +128,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.73 — 调整云服务器前端公网端口为 3139
+V0.1.74 — 增加云服务器 Docker 构建镜像源配置
 
 ## 环境要求
 

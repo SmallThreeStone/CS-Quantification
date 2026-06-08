@@ -229,6 +229,7 @@
    2. 实施进度：Docker Compose 已向 backend 和 worker 透传 Steam 订单簿环境变量，保证云服务器可启用买卖盘深度采集。
    3. 实施进度：已增加 `.env.production.example`，云服务器可复制为 `.env` 后替换强密码、公网 CORS 和微信/QQ Webhook。
    4. 实施进度：已增加 `scripts/check_env.sh`，部署验证前检查 `.env` 是否仍使用默认密码、Mock 数据源、本机 CORS、空推送或异常 worker 间隔。
+   5. 实施进度：Docker Compose / Dockerfile 已支持 `PIP_INDEX_URL`、`PIP_DEFAULT_TIMEOUT` 和 `NPM_REGISTRY` 构建参数，降低云服务器依赖下载超时风险。
 3. 部署数据库与 Redis。
    1. 实施进度：已增加数据库迁移启动器，支持全新数据库初始化和早期 MVP 表结构纳入迁移版本管理。
 4. 部署后端 API。
