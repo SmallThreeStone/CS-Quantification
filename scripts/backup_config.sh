@@ -26,7 +26,7 @@ STAGING_DIR="${BACKUP_DIR}/config_${TIMESTAMP}"
 ARCHIVE_PATH="${BACKUP_DIR}/config_${TIMESTAMP}.zip"
 mkdir -p "$STAGING_DIR"
 
-for file in ".env" ".env.example" "docker-compose.yml" "README.md" "CLAUDE.md"; do
+for file in ".env" ".env.example" ".env.production.example" "docker-compose.yml" "README.md" "CLAUDE.md"; do
   if [ -f "$file" ]; then
     cp "$file" "$STAGING_DIR/"
   else

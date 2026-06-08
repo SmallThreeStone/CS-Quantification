@@ -16,6 +16,7 @@ New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
 $files = @(
   ".env",
   ".env.example",
+  ".env.production.example",
   "docker-compose.yml",
   "README.md",
   "CLAUDE.md"

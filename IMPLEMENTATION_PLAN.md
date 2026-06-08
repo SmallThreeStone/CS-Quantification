@@ -223,9 +223,11 @@
 ### 2. 上线顺序
 
 1. 初始化服务器环境。
+   1. 实施进度：已增加 `scripts/bootstrap_opencloud.sh`，支持 OpenCloud OS 9 首次部署时安装 Docker Compose、firewalld、crond、git、curl、zip 和 iproute 等基础依赖。
 2. 配置 Docker 和 Docker Compose。
    1. 实施进度：已增强 Docker Compose 健康检查、重启策略和环境变量模板。
    2. 实施进度：Docker Compose 已向 backend 和 worker 透传 Steam 订单簿环境变量，保证云服务器可启用买卖盘深度采集。
+   3. 实施进度：已增加 `.env.production.example`，云服务器可复制为 `.env` 后替换强密码、公网 CORS 和微信/QQ Webhook。
 3. 部署数据库与 Redis。
    1. 实施进度：已增加数据库迁移启动器，支持全新数据库初始化和早期 MVP 表结构纳入迁移版本管理。
 4. 部署后端 API。

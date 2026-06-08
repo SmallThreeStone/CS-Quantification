@@ -97,6 +97,8 @@ cd frontend && npm run dev
 
 - **只能通过 git 拉取代码**：`cd /data/cs-market-monitor && git pull`，禁止 SFTP/SCP 上传单个文件
 - **只能通过 Docker Compose 启动**，禁止在容器外运行任何项目进程
+- **首次初始化 OpenCloud OS 9**：可执行 `sudo bash scripts/bootstrap_opencloud.sh --project-dir /data/cs-market-monitor` 安装 Docker Compose、firewalld、crond、git、curl、zip 和 iproute 等基础依赖
+- **生产环境变量模板**：云服务器复制 `.env.production.example` 为 `.env`，必须替换 `POSTGRES_PASSWORD`、公网 `CORS_ORIGINS` 和微信/QQ Webhook；真实 `.env` 禁止提交
 - **常规代码更新优先最小化重启，不默认重建镜像**：本地 commit + push → SSH 到服务器 → `git pull` 最新代码 → 仅重启受影响服务
 - **不要为了普通后端代码修改执行 `docker compose down && docker compose up -d --build`**：后端 Python 代码、采集规则、告警规则、小范围运行时代码，优先用 `docker compose restart backend worker` 或对应服务名
 - **必须重建镜像的情况**：`frontend/` 源码或静态构建产物变化、`package.json`/`package-lock.json`、`requirements.txt`、Dockerfile、docker-compose.yml、Node/Python 版本、系统依赖、构建脚本、镜像内路径结构发生变化时，执行 `docker compose up -d --build`
@@ -123,7 +125,7 @@ cd frontend && npm run dev
 
 ## 当前版本
 
-V0.1.69 — 增加 Linux 防火墙配置脚本
+V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本
 
 ## 环境要求
 
@@ -132,5 +134,6 @@ V0.1.69 — 增加 Linux 防火墙配置脚本
 - PostgreSQL 15+ / TimescaleDB（生产环境建议启用）
 - Redis 7+
 - Docker + Docker Compose（云服务器部署必须使用）
+- OpenCloud OS 9 首次部署可用 `scripts/bootstrap_opencloud.sh` 安装 Docker Compose、firewalld、crond、git、curl、zip 和 iproute
 - 至少一个可用的 CS2 市场数据源 API Key 或合规数据采集入口
 - Telegram Bot Token / 企业微信 Bot Webhook / 邮件 SMTP（三选一，用于异动推送）

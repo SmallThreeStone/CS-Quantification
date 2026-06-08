@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.69 — 增加 Linux 防火墙配置脚本
+V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本
 
 ## 功能范围
 
@@ -49,6 +49,7 @@ V0.1.69 — 增加 Linux 防火墙配置脚本
 - 备份状态巡检：展示数据库备份和配置备份脚本、最近文件、大小、时间、过期状态和每日备份 cron 安装状态
 - 定时备份：支持 OpenCloud OS 9 通过 cron 每日执行数据库和配置备份
 - 部署验证：支持 Linux `verify_deploy.sh` 和 Windows PowerShell `verify_deploy.ps1` 巡检核心 API、前端首页和可选采集
+- 首次部署引导：支持 OpenCloud OS 9 安装 Docker Compose、firewalld、cron、git、curl、zip 等基础依赖
 - 端口暴露控制：Docker Compose 中 PostgreSQL、Redis 和 backend 仅绑定本机地址，公网只暴露前端入口
 - 端口监听巡检：Linux 部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址
 - 防火墙配置：支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口
@@ -70,6 +71,8 @@ STEAM_ORDERBOOK_ENABLED=false
 WORKER_SLEEP_SECONDS=60
 PUSH_CHANNEL=none
 ```
+
+云服务器生产部署优先复制 `.env.production.example` 为 `.env`，并至少替换强密码、公网 CORS 来源和微信/QQ Webhook。生产环境建议使用 `MARKET_PROVIDER=steam`，不要提交真实 `.env`。
 
 Steam 订单簿深度优先读取饰品管理里的 `Steam NameID`；也可用环境变量做兜底映射，例如：
 
@@ -121,6 +124,16 @@ docker compose up -d --build
 ```
 
 访问：`http://localhost`
+
+### 首次初始化云服务器
+
+OpenCloud OS 9 首次部署可先安装基础依赖：
+
+```bash
+sudo bash scripts/bootstrap_opencloud.sh --project-dir /data/cs-market-monitor
+```
+
+脚本会安装并启用 Docker Compose、firewalld、crond、git、curl、zip、iproute 等部署必需工具，并创建项目目录。安装完成后通过 git 拉取代码，复制 `.env.production.example` 为 `.env`，再继续配置防火墙和启动服务。
 
 ### 部署验证
 
@@ -180,7 +193,7 @@ bash scripts/backup_config.sh
 bash scripts/backup_config.sh --backup-dir ./backups/config --retention-days 30
 ```
 
-配置备份会打包 `.env`、`.env.example`、`docker-compose.yml`、`README.md`、`CLAUDE.md` 和 `scripts/`，生成带时间戳的 `.zip` 文件。
+配置备份会打包 `.env`、`.env.example`、`.env.production.example`、`docker-compose.yml`、`README.md`、`CLAUDE.md` 和 `scripts/`，生成带时间戳的 `.zip` 文件。
 
 ### 定时备份
 
@@ -254,6 +267,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本和生产环境变量模板，辅助云服务器安装 Docker Compose、firewalld、cron 与基础工具。
 - V0.1.69 — 增加 Linux 防火墙配置脚本，支持 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口。
 - V0.1.68 — 增加 Linux 端口巡检脚本，部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址。
 - V0.1.67 — 收紧 Compose 端口暴露，PostgreSQL、Redis 和 backend 仅绑定本机地址，降低云服务器公网暴露面。

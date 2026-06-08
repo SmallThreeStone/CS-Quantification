@@ -40,6 +40,7 @@ def test_backup_config_script_archives_env_compose_and_scripts():
 
     assert '".env"' in script
     assert '"docker-compose.yml"' in script
+    assert '".env.production.example"' in script
     assert '"CLAUDE.md"' in script
     assert 'Test-Path -LiteralPath "scripts"' in script
     assert "Compress-Archive" in script
@@ -52,6 +53,7 @@ def test_backup_config_shell_script_archives_env_compose_and_scripts():
 
     assert '".env"' in script
     assert '"docker-compose.yml"' in script
+    assert '".env.production.example"' in script
     assert '"CLAUDE.md"' in script
     assert '[ -d "scripts" ]' in script
     assert "zip -qr" in script
@@ -99,6 +101,32 @@ def test_configure_firewall_shell_script_allows_only_public_entrypoints():
     assert "for port in 5432 6379 8000" in script
     assert '--remove-port="${port}/tcp"' in script
     assert "bash scripts/check_firewall.sh" in script
+
+
+def test_bootstrap_opencloud_script_installs_runtime_dependencies():
+    script = (ROOT / "scripts" / "bootstrap_opencloud.sh").read_text(encoding="utf-8")
+
+    assert "bootstrapping OpenCloud OS 9 requires root" in script
+    assert "dnf -y install dnf-plugins-core ca-certificates curl git zip unzip tar gzip cronie firewalld iproute" in script
+    assert "https://download.docker.com/linux/centos/docker-ce.repo" in script
+    assert "docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin" in script
+    assert "systemctl enable --now docker" in script
+    assert "systemctl enable --now firewalld" in script
+    assert "systemctl enable --now crond" in script
+    assert "git clone git@github.com:SmallThreeStone/CS-Quantification.git" in script
+    assert "cp .env.production.example .env" in script
+
+
+def test_production_env_template_defaults_to_steam_and_no_secret():
+    env_template = (ROOT / ".env.production.example").read_text(encoding="utf-8")
+
+    assert "POSTGRES_PASSWORD=replace_with_strong_password" in env_template
+    assert "MARKET_PROVIDER=steam" in env_template
+    assert "STEAM_ORDERBOOK_ENABLED=true" in env_template
+    assert "PUSH_CHANNEL=wechat" in env_template
+    assert "WECHAT_WEBHOOK_URL=" in env_template
+    assert "QQ_WEBHOOK_URL=" in env_template
+    assert "cs_quant_password" not in env_template
 
 
 def test_install_backup_cron_script_installs_daily_backup_jobs():
