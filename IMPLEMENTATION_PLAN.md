@@ -228,6 +228,7 @@
    1. 实施进度：已增强 Docker Compose 健康检查、重启策略和环境变量模板。
    2. 实施进度：Docker Compose 已向 backend 和 worker 透传 Steam 订单簿环境变量，保证云服务器可启用买卖盘深度采集。
    3. 实施进度：已增加 `.env.production.example`，云服务器可复制为 `.env` 后替换强密码、公网 CORS 和微信/QQ Webhook。
+   4. 实施进度：已增加 `scripts/check_env.sh`，部署验证前检查 `.env` 是否仍使用默认密码、Mock 数据源、本机 CORS、空推送或异常 worker 间隔。
 3. 部署数据库与 Redis。
    1. 实施进度：已增加数据库迁移启动器，支持全新数据库初始化和早期 MVP 表结构纳入迁移版本管理。
 4. 部署后端 API。
@@ -256,6 +257,7 @@
    17. 实施进度：已增加 `scripts/verify_deploy.sh`，支持 OpenCloud OS 9 / Linux 云服务器通过 bash 巡检 Docker Compose、核心 API、前端首页和可选采集。
    18. 实施进度：已增加 `scripts/check_firewall.sh`，部署验证时检查 PostgreSQL、Redis、backend 是否仅监听本机地址。
    19. 实施进度：已增加 `scripts/configure_firewall.sh`，支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口放行。
+   20. 实施进度：Linux 部署验证脚本已接入 `scripts/check_env.sh`，先检查生产环境变量再继续巡检防火墙和 API。
 9. 部署前备份数据库。
    1. 实施进度：已增加 `scripts/backup_postgres.ps1`，支持 Docker Compose PostgreSQL 生成 `.dump` 备份并清理过期备份。
    2. 实施进度：已增加 `scripts/backup_postgres.sh`，支持 OpenCloud OS 9 / Linux 云服务器通过 bash 执行 PostgreSQL 备份。

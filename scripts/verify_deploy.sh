@@ -38,6 +38,9 @@ json_post() {
 echo "== docker compose ps =="
 docker compose ps
 
+echo "== env =="
+bash scripts/check_env.sh
+
 echo "== firewall =="
 bash scripts/check_firewall.sh
 

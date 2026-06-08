@@ -65,6 +65,7 @@ def test_verify_deploy_shell_script_checks_core_endpoints_and_collect():
     script = (ROOT / "scripts" / "verify_deploy.sh").read_text(encoding="utf-8")
 
     assert "docker compose ps" in script
+    assert "bash scripts/check_env.sh" in script
     assert "bash scripts/check_firewall.sh" in script
     assert 'json_get "health" "/api/health"' in script
     assert 'json_get "ops-health" "/api/ops/health"' in script
@@ -87,6 +88,22 @@ def test_check_firewall_shell_script_guards_internal_ports():
     assert "check_public_entry 80 Frontend" in script
     assert "check_public_entry 443 HTTPS" in script
     assert "exposed beyond loopback" in script
+
+
+def test_check_env_shell_script_guards_cloud_env_values():
+    script = (ROOT / "scripts" / "check_env.sh").read_text(encoding="utf-8")
+
+    assert 'ENV_FILE=".env"' in script
+    assert "--env-file" in script
+    assert "POSTGRES_PASSWORD still uses a placeholder or default value" in script
+    assert "POSTGRES_PASSWORD should be at least 16 characters" in script
+    assert "MARKET_PROVIDER should be steam for cloud P0 validation" in script
+    assert "STEAM_ORDERBOOK_ENABLED is not true" in script
+    assert "CORS_ORIGINS still contains local or placeholder origins" in script
+    assert "WORKER_SLEEP_SECONDS must be an integer" in script
+    assert "PUSH_CHANNEL=wechat but WECHAT_WEBHOOK_URL is empty" in script
+    assert "PUSH_CHANNEL=qq but QQ_WEBHOOK_URL is empty" in script
+    assert "PUSH_CHANNEL should be wechat or qq for cloud deployment" in script
 
 
 def test_configure_firewall_shell_script_allows_only_public_entrypoints():

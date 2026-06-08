@@ -4,7 +4,7 @@
 
 ## 当前版本
 
-V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本
+V0.1.71 — 增加生产环境变量巡检脚本
 
 ## 功能范围
 
@@ -50,6 +50,7 @@ V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本
 - 定时备份：支持 OpenCloud OS 9 通过 cron 每日执行数据库和配置备份
 - 部署验证：支持 Linux `verify_deploy.sh` 和 Windows PowerShell `verify_deploy.ps1` 巡检核心 API、前端首页和可选采集
 - 首次部署引导：支持 OpenCloud OS 9 安装 Docker Compose、firewalld、cron、git、curl、zip 等基础依赖
+- 生产环境变量巡检：Linux 部署验证会检查 `.env` 是否仍使用默认密码、Mock 数据源、本机 CORS 或空推送配置
 - 端口暴露控制：Docker Compose 中 PostgreSQL、Redis 和 backend 仅绑定本机地址，公网只暴露前端入口
 - 端口监听巡检：Linux 部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址
 - 防火墙配置：支持 OpenCloud OS 9 通过 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口
@@ -73,6 +74,13 @@ PUSH_CHANNEL=none
 ```
 
 云服务器生产部署优先复制 `.env.production.example` 为 `.env`，并至少替换强密码、公网 CORS 来源和微信/QQ Webhook。生产环境建议使用 `MARKET_PROVIDER=steam`，不要提交真实 `.env`。
+
+OpenCloud OS 9 部署前可单独检查生产环境变量：
+
+```bash
+bash scripts/check_env.sh
+bash scripts/check_env.sh --env-file .env
+```
 
 Steam 订单簿深度优先读取饰品管理里的 `Steam NameID`；也可用环境变量做兜底映射，例如：
 
@@ -150,9 +158,10 @@ bash scripts/verify_deploy.sh --base-url http://localhost --collect
 ```
 
 验证脚本需要服务器已安装 Docker Compose，并且项目服务已经启动。
-也可以单独检查端口监听状态：
+Linux 验证脚本会先检查 `.env` 和端口监听状态。也可以单独执行：
 
 ```bash
+bash scripts/check_env.sh
 bash scripts/check_firewall.sh
 ```
 
@@ -267,6 +276,7 @@ QQ_WEBHOOK_URL=https://...
 
 ## 版本历史
 
+- V0.1.71 — 增加生产环境变量巡检脚本，部署验证前检查强密码、Steam 数据源、订单簿、CORS、worker 间隔和微信/QQ 推送配置。
 - V0.1.70 — 增加 OpenCloud OS 9 首次部署引导脚本和生产环境变量模板，辅助云服务器安装 Docker Compose、firewalld、cron 与基础工具。
 - V0.1.69 — 增加 Linux 防火墙配置脚本，支持 firewalld 放行 SSH/HTTP/HTTPS 并移除内部服务端口。
 - V0.1.68 — 增加 Linux 端口巡检脚本，部署验证会检查 PostgreSQL、Redis、backend 是否仅监听本机地址。
